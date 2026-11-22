@@ -1,0 +1,21 @@
+[package]
+name = "a2ui-codegen"
+description = "Build-time Rust helper generation from official A2UI catalog schemas"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["a2ui", "codegen", "build", "schema"]
+categories = ["development-tools::build-utils"]
+
+[dependencies]
+prettyplease.workspace = true
+proc-macro2.workspace = true
+quote.workspace = true
+serde_json.workspace = true
+syn.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,18 @@
+[package]
+name = "a2ui-author"
+description = "Transport-independent authoring types for the official A2UI v1.0 protocol"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["a2ui", "agent", "ui", "json"]
+categories = ["api-bindings"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

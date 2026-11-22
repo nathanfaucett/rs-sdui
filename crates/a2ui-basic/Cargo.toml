@@ -1,0 +1,21 @@
+[package]
+name = "a2ui-basic"
+description = "Generated Rust authoring helpers for the official A2UI v1.0 Basic Catalog"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["a2ui", "agent", "ui", "catalog"]
+categories = ["api-bindings"]
+
+[dependencies]
+a2ui-author.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+a2ui-codegen.workspace = true
+
+[lints]
+workspace = true

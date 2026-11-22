@@ -1,0 +1,24 @@
+{
+  "name": "a2ui-browser-example",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:wasm": "wasm-pack build --target web --out-dir src/pkg --out-name browser .",
+    "predev": "npm run build:wasm",
+    "dev": "vite",
+    "build": "npm run build:wasm && vite build",
+    "preview": "vite preview",
+    "precheck": "npm run build:wasm",
+    "check": "tsc --noEmit",
+    "test": "node test.mjs"
+  },
+  "dependencies": {
+    "@a2ui/lit": "0.15.0",
+    "@a2ui/web_core": "0.15.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "^8.2.0"
+  }
+}

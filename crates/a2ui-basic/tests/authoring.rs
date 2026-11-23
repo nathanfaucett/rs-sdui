@@ -1,13 +1,25 @@
-use a2ui_author::{DataBinding, DataModel, Event};
+use a2ui_author::{A2uiPath, DataModel, Event};
 use a2ui_basic::v1::{self, Button, ButtonVariant, Column, Text};
 use a2ui_view::{Element, EventExt};
+use serde::Serialize;
 use serde_json::json;
+
+#[derive(A2uiPath, Serialize)]
+struct Trip {
+    name: String,
+}
+
+#[derive(A2uiPath, Serialize)]
+struct Booking {
+    trip: Trip,
+    price: u32,
+}
 
 fn confirm_button() -> impl Into<Element> + 'static {
     Button::new(
         Text::new("Confirm booking"),
         Event::new("confirm_booking")
-            .context("price", DataBinding::new("/price"))
+            .context("price", Booking::paths().price())
             .on(|(): &(), _| ()),
     )
     .variant(ButtonVariant::Primary)
@@ -15,15 +27,21 @@ fn confirm_button() -> impl Into<Element> + 'static {
 
 #[test]
 fn generated_components_render_nested_standard_a2ui_messages() {
+    let state = Booking {
+        trip: Trip {
+            name: "Berlin to San Francisco".to_owned(),
+        },
+        price: 455,
+    };
     let message = v1::surface("booking")
         .root(Column::new((
-            Text::new(DataBinding::new("/trip/name")),
+            Text::new(Booking::paths().trip().name()),
             confirm_button(),
         )))
         .data_model(
             DataModel::new()
-                .with("trip", json!({"name": "Berlin to San Francisco"}))
-                .with("price", 455),
+                .with("trip", json!({"name": state.trip.name}))
+                .with("price", state.price),
         )
         .into_message();
 
@@ -62,7 +80,7 @@ fn generated_components_render_nested_standard_a2ui_messages() {
 
 #[test]
 fn generated_functions_emit_standard_function_calls() {
-    let call = v1::functions::format_currency("USD", DataBinding::new("/price")).arg("decimals", 2);
+    let call = v1::functions::format_currency("USD", Booking::paths().price()).arg("decimals", 2);
 
     assert_eq!(
         serde_json::to_value(call).expect("function call must serialize"),

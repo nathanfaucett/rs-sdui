@@ -1,0 +1,14 @@
+[
+  {
+    "title": "Read the A2UI specification",
+    "completed": true
+  },
+  {
+    "title": "Build a declarative interface",
+    "completed": false
+  },
+  {
+    "title": "Connect an asynchronous action",
+    "completed": false
+  }
+]

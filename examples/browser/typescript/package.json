@@ -3,14 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@12.4.1",
   "scripts": {
     "build:wasm": "wasm-pack build --target web --out-dir ../typescript/src/pkg --out-name browser ../rust",
-    "predev": "npm run build:wasm",
-    "dev": "vite",
-    "build": "npm run build:wasm && vite build",
-    "preview": "vite preview",
-    "precheck": "npm run build:wasm",
-    "check": "tsc --noEmit",
+    "predev": "pnpm run build:wasm",
+    "dev": "portless a2ui-browser vite dev",
+    "build": "pnpm run build:wasm && vite build",
+    "preview": "portless a2ui-browser vite preview",
+    "precheck": "pnpm run build:wasm",
+    "check": "tsc --noEmit && biome check .",
+    "format": "biome format --write .",
     "test": "node test.mjs"
   },
   "dependencies": {
@@ -18,6 +20,9 @@
     "@a2ui/web_core": "0.15.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.6",
+    "@types/node": "^26.6.6",
+    "portless": "^0.15.4",
     "typescript": "5.9.3",
     "vite": "^8.2.0"
   }

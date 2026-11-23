@@ -13,6 +13,7 @@ This workspace is not an A2UI Core SDK, Agent SDK, or renderer. Official A2UI SD
 | `a2ui-app`         | Owned state machines, declarative view mounting, automatic state data models, action decoding, component diffs, and surface lifecycle. |
 | `a2ui-author`      | Transport-independent A2UI v1.0 messages, components, bindings, actions, and function calls.                                           |
 | `a2ui-codegen`     | `build.rs` generation of typed component builders and function helpers from catalog JSON Schema files.                                 |
+| `a2ui-derive`      | Implementation of the `A2uiPath` derive exported by `a2ui-author`.                                                                     |
 | `a2ui-view`        | Declarative element trees, child composition, typed event callbacks, and async effects.                                                |
 | `a2ui-basic`       | Generated helpers for the official v1.0 Basic Catalog. Its catalog file is copied verbatim from `a2ui-project/a2ui`.                   |
 | `examples/browser` | A complete local Rust/WASM application with Vite, TypeScript, and the official `@a2ui/web_core` and `@a2ui/lit` packages.              |
@@ -30,29 +31,29 @@ Standard events and their state transitions are declared together in the view. N
 
 ```rust
 use a2ui_app::Application;
-use a2ui_author::{ActionMessage, DataBinding, Event};
+use a2ui_author::{A2uiPath, ActionMessage, DataBinding, Event};
 use a2ui_basic::v1::{self, Button, Column, Text};
 use a2ui_view::{Element, EventExt};
 use serde::Serialize;
 
-#[derive(Clone, Default, Serialize)]
+#[derive(A2uiPath, Clone, Default, Serialize)]
 struct Counter {
     value: i64,
 }
 
 // Reusable component: typed props in, a declarative view out.
-fn value_label(path: &str) -> impl Into<Element> + 'static {
-    Text::new(DataBinding::new(path))
+fn value_label(path: DataBinding) -> impl Into<Element> + 'static {
+    Text::new(path)
 }
 
 fn counter_view(_state: &Counter) -> Element {
     Column::new((
-        value_label("/value"),
+        value_label(Counter::paths().value()),
         Button::new(
             Text::new("Increment"),
             Event::new("increment").on(|state: &Counter, _action| Counter {
-                            value: state.value + 1,
-                        }),
+                value: state.value + 1,
+            }),
         ),
     ))
     .into()
@@ -70,6 +71,8 @@ let action: ActionMessage = serde_json::from_str(&incoming_json)?;
 let update_messages = app.handle(action).await?;
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
+
+Derive `A2uiPath` on state, nested structs, and scalar enums. Structs provide `Type::paths()`; enums act as scalar fields. Generated bindings follow Serde names, and removed Rust fields fail at compile time. Collection fields use `.index(index)`. The derive follows Serde `rename`, `rename_all`, `flatten`, `skip`, and `skip_serializing`. It currently accepts named, non-generic structs and enums. Use typed paths for application state; reserve `DataBinding::new` for relative list-template bindings and wire-level protocol code.
 
 The view is a pure description. The runtime generates all component IDs, flattens the tree into the standard A2UI list, creates the surface, and serializes state as its root data model. State must implement `Serialize` and produce a JSON object. Use `#[serde(skip)]` for clients or other non-data fields.
 
@@ -180,14 +183,25 @@ The action loop does not interpret `callAgentFunction`, `rendererFunctionRespons
 ## Author a surface without the runtime
 
 ```rust
-use a2ui_author::{DataBinding, Event};
+use a2ui_author::{A2uiPath, Event};
 use a2ui_basic::v1::{self, Button, Column, Text};
+use serde::Serialize;
+
+#[derive(A2uiPath, Serialize)]
+struct Form {
+    name: String,
+}
+
+#[derive(A2uiPath, Serialize)]
+struct State {
+    form: Form,
+}
 
 let message = v1::surface("main").root(Column::new((
     Text::new("A2UI from Rust"),
     Button::new(
         Text::new("Submit"),
-        Event::new("submit").context("name", DataBinding::new("/form/name")),
+        Event::new("submit").context("name", State::paths().form().name()),
     ),
 )));
 
@@ -229,18 +243,20 @@ The generator supports A2UI v1.0 only. Complex schema shapes without a small saf
 
 ```sh
 cd examples/browser/typescript
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
-The example implements a submit/reset state machine. The official Lit renderer sends a standard action to the local WASM application. Rust returns standard A2UI updates to the official `MessageProcessor`. The local call is the only transport used; replace the callback to use a remote transport.
+The example implements a complete todo list: add, edit, complete/reopen, delete, filter, and clear completed tasks. The official Lit renderer sends standard actions to the local WASM application. Rust returns standard A2UI updates to the official `MessageProcessor`. The local call is the only transport used; replace the callback to use a remote transport.
+
+The `dev` and `preview` scripts use the named `a2ui-browser` portless route. Portless supplies a dynamic `PORT` to Vite and prints the local `.localhost` URL.
 
 Useful checks:
 
 ```sh
-npm test        # official MessageProcessor validates the complete native state loop
-npm run check   # builds WASM and checks TypeScript
-npm run build   # production WASM + Vite build
+pnpm test        # official MessageProcessor validates the complete native state loop
+pnpm run check   # builds WASM and checks TypeScript and Biome
+pnpm run build   # production WASM + Vite build
 ```
 
 Official npm SDK `0.15.0` currently rejects the current schema's `@checks` field and uses older unprefixed component-envelope keys. The browser example avoids those fields. No compatibility transform is applied. Use a renderer and catalog that implement the same v1.0 schema revision.

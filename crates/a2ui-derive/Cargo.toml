@@ -1,0 +1,23 @@
+[package]
+name = "a2ui-derive"
+description = "Derive typed A2UI data bindings from Serde state"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["a2ui", "derive", "state", "json"]
+categories = ["development-tools::procedural-macro-helpers"]
+
+[lib]
+path = "src/derive.rs"
+proc-macro = true
+
+[dependencies]
+proc-macro2.workspace = true
+quote.workspace = true
+syn.workspace = true
+
+[lints]
+workspace = true

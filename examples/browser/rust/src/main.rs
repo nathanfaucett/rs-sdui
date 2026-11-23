@@ -7,16 +7,19 @@ fn main() {
     block_on(async {
         let mut app = application();
         let mut messages = app.start().expect("initial view must be valid");
-        messages.extend(
-            app.handle(action("submit_name", json!({"name": "Ada"})))
-                .await
-                .expect("submit must succeed"),
-        );
-        messages.extend(
-            app.handle(action("reset_form", json!({})))
-                .await
-                .expect("reset must succeed"),
-        );
+        for (name, context) in [
+            ("add_todo", json!({"title": "Learn A2UI"})),
+            ("add_todo", json!({"title": "Build a todo list"})),
+            ("toggle_1", json!({})),
+            ("save_2", json!({"title": "Ship the todo list"})),
+            ("show_active", json!({})),
+        ] {
+            messages.extend(
+                app.handle(action(name, context))
+                    .await
+                    .unwrap_or_else(|error| panic!("{name} must succeed: {error}")),
+            );
+        }
         let json = serde_json::to_string(&messages).expect("A2UI messages must serialize");
         println!("{json}");
     });

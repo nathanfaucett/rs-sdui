@@ -18,5 +18,8 @@ serde_json.workspace = true
 [build-dependencies]
 a2ui-codegen.workspace = true
 
+[dev-dependencies]
+serde.workspace = true
+
 [lints]
 workspace = true

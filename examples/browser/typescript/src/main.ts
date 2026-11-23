@@ -23,7 +23,7 @@ const processor = new MessageProcessor<LitComponentApi>(
   {
     outboundListener: deliver,
     errorHandler: (error) => console.error("A2UI renderer error", error),
-  },
+  }
 );
 
 processor.onSurfaceCreated((surface) => {

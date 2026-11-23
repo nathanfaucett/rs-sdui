@@ -3,10 +3,10 @@ use std::{cell::RefCell, fmt::Display, rc::Rc};
 use a2ui_app::Application;
 use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
 
-use crate::{ProfileApp, application, decode_action};
+use crate::{TodoApp, application, decode_action};
 
 thread_local! {
-    static APPLICATION: Rc<RefCell<Application<ProfileApp>>> = Rc::new(RefCell::new(application()));
+    static APPLICATION: Rc<RefCell<Application<TodoApp>>> = Rc::new(RefCell::new(application()));
 }
 
 /// Starts the local Rust application and returns standard A2UI JSON messages.

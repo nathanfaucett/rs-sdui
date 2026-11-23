@@ -2,7 +2,7 @@ use std::iter::once;
 
 use a2ui_app::{Application, ApplicationError};
 use a2ui_author::{
-    ActionEvent, ActionMessage, AgentToRendererMessage, DataBinding, Event, ProtocolVersion,
+    A2uiPath, ActionEvent, ActionMessage, AgentToRendererMessage, Event, ProtocolVersion,
 };
 use a2ui_basic::v1::{self, Button, Column, Text};
 use a2ui_view::{Effect, Element, EventExt};
@@ -13,14 +13,14 @@ use futures::{
 use serde::Serialize;
 use serde_json::{Map, json};
 
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(A2uiPath, Clone, Debug, Default, Serialize)]
 struct Counter {
     count: i32,
 }
 
 /// A reusable component: typed props in, a declarative view out.
 fn counter_label() -> impl Into<Element> + 'static {
-    Text::new(DataBinding::new("/count"))
+    Text::new(Counter::paths().count())
 }
 
 fn counter_view(_state: &Counter) -> Element {

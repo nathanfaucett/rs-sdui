@@ -1,7 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use a2ui_author::{Component, CreateSurface};
-use serde_json::Value;
 
 use crate::ApplicationError;
 
@@ -77,14 +76,6 @@ pub fn changed_components(previous: &CreateSurface, next: &CreateSurface) -> Vec
         })
         .cloned()
         .collect()
-}
-
-pub fn data_model(view: &CreateSurface) -> Value {
-    Value::Object(
-        view.data_model
-            .as_ref()
-            .map_or_else(serde_json::Map::new, |model| model.0.clone()),
-    )
 }
 
 fn is_identifier(value: &str) -> bool {

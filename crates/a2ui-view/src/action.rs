@@ -2,62 +2,63 @@ use std::{error::Error, fmt, pin::Pin};
 
 use a2ui_author::ActionEvent;
 
-use crate::{Effect, MaybeSend};
+use crate::{Effect, MaybeSend, MaybeSync};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub type BoxError = Box<dyn Error + Send + Sync>;
 #[cfg(target_arch = "wasm32")]
 pub type BoxError = Box<dyn Error>;
 
-/// The result of an action. Use `?` for ordinary Rust errors.
-pub type ActionResult = Result<(), BoxError>;
+/// The next state or an action error. Use `?` for ordinary Rust errors.
+pub type ActionResult<S> = Result<S, BoxError>;
 
-/// The result of an asynchronous effect before its state update is applied.
-pub type EffectResult<T> = Result<T, BoxError>;
+/// The next state produced by an asynchronous effect.
+pub type EffectResult<S> = Result<S, BoxError>;
 
-/// Converts an infallible update or a fallible update into an action result.
-pub trait IntoActionResult {
-    /// Converts the update result.
+/// Converts an infallible or fallible value into the next state.
+pub trait IntoActionResult<S> {
+    /// Converts the transition result.
     ///
     /// # Errors
     ///
     /// Returns the action's error unchanged.
-    fn into_action_result(self) -> ActionResult;
+    fn into_action_result(self) -> ActionResult<S>;
 }
 
-impl IntoActionResult for () {
-    fn into_action_result(self) -> ActionResult {
-        Ok(())
+impl<S> IntoActionResult<S> for S {
+    fn into_action_result(self) -> ActionResult<S> {
+        Ok(self)
     }
 }
 
-impl IntoActionResult for ActionResult {
-    fn into_action_result(self) -> ActionResult {
+impl<S> IntoActionResult<S> for ActionResult<S> {
+    fn into_action_result(self) -> Self {
         self
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-type BoxActionFuture<'a> = Pin<Box<dyn Future<Output = ActionResult> + Send + 'a>>;
+type BoxActionFuture<'a, S> = Pin<Box<dyn Future<Output = ActionResult<S>> + Send + 'a>>;
 #[cfg(target_arch = "wasm32")]
-type BoxActionFuture<'a> = Pin<Box<dyn Future<Output = ActionResult> + 'a>>;
+type BoxActionFuture<'a, S> = Pin<Box<dyn Future<Output = ActionResult<S>> + 'a>>;
 
 #[cfg(not(target_arch = "wasm32"))]
-type Callback<S> = Box<dyn FnMut(&mut S, ActionEvent) -> BoxActionFuture<'_> + Send>;
+type Callback<S> = Box<dyn Fn(&S, ActionEvent) -> BoxActionFuture<'_, S> + Send + Sync>;
 #[cfg(target_arch = "wasm32")]
-type Callback<S> = Box<dyn FnMut(&mut S, ActionEvent) -> BoxActionFuture<'_>>;
+type Callback<S> = Box<dyn Fn(&S, ActionEvent) -> BoxActionFuture<'_, S>>;
 
-/// A typed state transition attached to a declarative event.
+/// A pure state transition attached to a declarative event.
 pub struct Handler<S> {
     callback: Callback<S>,
 }
 
 impl<S> Handler<S> {
-    /// Creates a synchronous state transition.
-    pub fn action<F, R>(mut handler: F) -> Self
+    /// Creates a synchronous transition from the current state and action.
+    pub fn action<F, R>(handler: F) -> Self
     where
-        F: FnMut(&mut S, ActionEvent) -> R + MaybeSend + 'static,
-        R: IntoActionResult + MaybeSend,
+        F: Fn(&S, ActionEvent) -> R + MaybeSend + MaybeSync + 'static,
+        R: IntoActionResult<S> + MaybeSend,
+        S: MaybeSend + MaybeSync,
     {
         Self {
             callback: Box::new(move |state, action| {
@@ -67,21 +68,21 @@ impl<S> Handler<S> {
         }
     }
 
-    /// Creates an asynchronous effect followed by one state update.
-    pub fn effect<F>(mut handler: F) -> Self
+    /// Creates an asynchronous effect that returns the next state.
+    pub fn effect<F>(handler: F) -> Self
     where
-        F: FnMut(&mut S, ActionEvent) -> Effect<S> + MaybeSend + 'static,
-        S: MaybeSend,
+        F: Fn(&S, ActionEvent) -> Effect<S> + MaybeSend + MaybeSync + 'static,
+        S: MaybeSend + MaybeSync,
     {
         Self {
             callback: Box::new(move |state, action| {
                 let effect = handler(state, action);
-                Box::pin(async move { effect.run(state).await })
+                Box::pin(async move { effect.run().await })
             }),
         }
     }
 
-    /// Runs the transition without selecting an executor.
+    /// Runs the transition without selecting an executor or mutating current state.
     ///
     /// # Errors
     ///
@@ -90,7 +91,7 @@ impl<S> Handler<S> {
         clippy::future_not_send,
         reason = "native handlers are Send when S is Send; WASM handlers are local"
     )]
-    pub async fn run(&mut self, state: &mut S, action: ActionEvent) -> ActionResult {
+    pub async fn run(&self, state: &S, action: ActionEvent) -> ActionResult<S> {
         (self.callback)(state, action).await
     }
 }

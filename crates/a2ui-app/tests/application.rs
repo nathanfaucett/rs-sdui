@@ -1,7 +1,9 @@
 use std::iter::once;
 
 use a2ui_app::{Application, ApplicationError};
-use a2ui_author::{ActionEvent, ActionMessage, AgentToRendererMessage, Event, ProtocolVersion};
+use a2ui_author::{
+    ActionEvent, ActionMessage, AgentToRendererMessage, DataBinding, Event, ProtocolVersion,
+};
 use a2ui_basic::v1::{self, Button, Column, Text};
 use a2ui_view::{Effect, Element, EventExt};
 use futures::{
@@ -17,20 +19,22 @@ struct Counter {
 }
 
 /// A reusable component: typed props in, a declarative view out.
-fn counter_label(count: i32) -> impl Into<Element> + 'static {
-    Text::new(count.to_string())
+fn counter_label() -> impl Into<Element> + 'static {
+    Text::new(DataBinding::new("/count"))
 }
 
-fn counter_view(state: &Counter) -> Element {
+fn counter_view(_state: &Counter) -> Element {
     Column::new((
-        counter_label(state.count),
+        counter_label(),
         Button::new(
             Text::new("Increment"),
-            Event::new("increment").on(|state: &mut Counter, _| state.count += 1),
+            Event::new("increment").on(|state: &Counter, _| Counter {
+                count: state.count + 1,
+            }),
         ),
         Button::new(
             Text::new("Noop"),
-            Event::new("noop").on(|_: &mut Counter, _| {}),
+            Event::new("noop").on(|state: &Counter, _| Counter { count: state.count }),
         ),
     ))
     .into()
@@ -38,6 +42,48 @@ fn counter_view(state: &Counter) -> Element {
 
 fn counter() -> Application<Counter> {
     Application::new("main", v1::CATALOG_ID, Counter::default(), counter_view)
+}
+
+#[test]
+fn complete_tree_serializes_as_standard_a2ui_json() {
+    let messages = counter().start().unwrap();
+    assert_eq!(
+        serde_json::to_value(messages).unwrap(),
+        json!([{
+            "version": "1.0",
+            "createSurface": {
+                "surfaceId": "main",
+                "catalogId": v1::CATALOG_ID,
+                "components": [
+                    {
+                        "id": "root",
+                        "component": "Column",
+                        "children": ["root_0", "root_1", "root_2"]
+                    },
+                    {
+                        "id": "root_0",
+                        "component": "Text",
+                        "text": {"@path": "/count"}
+                    },
+                    {
+                        "id": "root_1",
+                        "component": "Button",
+                        "child": "root_1_0",
+                        "action": {"event": {"name": "increment"}}
+                    },
+                    {"id": "root_1_0", "component": "Text", "text": "Increment"},
+                    {
+                        "id": "root_2",
+                        "component": "Button",
+                        "child": "root_2_0",
+                        "action": {"event": {"name": "noop"}}
+                    },
+                    {"id": "root_2_0", "component": "Text", "text": "Noop"}
+                ],
+                "dataModel": {"count": 0}
+            }
+        }])
+    );
 }
 
 #[test]
@@ -51,15 +97,12 @@ fn basic_catalog_components_render_state_and_actions() {
 
         let updates = app.handle(action("increment", "main")).await.unwrap();
         assert_eq!(app.state().count, 1);
+        assert_eq!(updates.len(), 1);
         assert!(matches!(
             &updates[0],
             AgentToRendererMessage::UpdateDataModel(message)
-                if message.update_data_model.value == json!({"count": 1})
-        ));
-        assert!(matches!(
-            &updates[1],
-            AgentToRendererMessage::UpdateComponents(message)
-                if message.update_components.components[0].id() == Some("root_0")
+                if message.update_data_model.path.as_deref() == Some("/count")
+                    && message.update_data_model.value == json!(1)
         ));
 
         app.handle(action("unknown", "main")).await.unwrap_err();
@@ -78,7 +121,8 @@ fn basic_catalog_components_render_state_and_actions() {
         assert!(matches!(
             &updates[0],
             AgentToRendererMessage::UpdateDataModel(message)
-                if message.update_data_model.value == json!({"count": 1})
+                if message.update_data_model.path.as_deref() == Some("/count")
+                    && message.update_data_model.value == json!(1)
         ));
     });
 }
@@ -103,9 +147,7 @@ fn conditional_children_do_not_recreate_the_surface() {
                     Column::new(children),
                     Button::new(
                         Text::new("Hide detail"),
-                        Event::new("hide").on(|state: &mut Detail, _| {
-                            state.show_detail = false;
-                        }),
+                        Event::new("hide").on(|_: &Detail, _| Detail { show_detail: false }),
                     ),
                 ))
             },
@@ -135,10 +177,10 @@ fn async_effects_apply_io_results_to_state() {
             "main",
             v1::CATALOG_ID,
             Counter::default(),
-            move |state: &Counter| {
+            move |_state: &Counter| {
                 let input = input.clone();
                 Column::new((
-                    counter_label(state.count),
+                    counter_label(),
                     Button::new(
                         Text::new("Load"),
                         Event::new("load").on_effect(move |_, _| {
@@ -147,7 +189,7 @@ fn async_effects_apply_io_results_to_state() {
                                 let mut value = String::new();
                                 input.read_to_string(&mut value).await?;
                                 let count = value.parse()?;
-                                Ok(move |state: &mut Counter| state.count = count)
+                                Ok(Counter { count })
                             })
                         }),
                     ),

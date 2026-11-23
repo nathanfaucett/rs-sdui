@@ -8,8 +8,8 @@ use a2ui_view::{Element, Handler, MaybeSend, MaybeSync};
 use serde::Serialize;
 
 use crate::{
-    ApplicationError,
-    view::{changed_components, data_model, validate},
+    ApplicationError, data,
+    view::{changed_components, validate},
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -25,10 +25,10 @@ struct Current<S> {
 /// Owns serializable state and a pure declarative view for one A2UI surface.
 ///
 /// State must serialize to a JSON object. It becomes the root A2UI data model.
-/// Every completed action replaces that data model. A2UI inputs can change
-/// the renderer-local model without sending a message, so diffing only Rust
-/// views could leave stale input values. Component updates use structural diffs.
-pub struct Application<S: Clone> {
+/// Completed actions emit only changed data paths. Bound paths are also refreshed
+/// because A2UI inputs can change the renderer-local model without sending a message.
+/// Component updates use structural diffs.
+pub struct Application<S> {
     surface_id: String,
     catalog_id: String,
     state: S,
@@ -36,7 +36,7 @@ pub struct Application<S: Clone> {
     current: Option<Current<S>>,
 }
 
-impl<S: Clone + fmt::Debug> fmt::Debug for Application<S> {
+impl<S: fmt::Debug> fmt::Debug for Application<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Application")
             .field("surface_id", &self.surface_id)
@@ -50,7 +50,7 @@ impl<S: Clone + fmt::Debug> fmt::Debug for Application<S> {
     }
 }
 
-impl<S: Clone + Serialize + 'static> Application<S> {
+impl<S: Serialize + 'static> Application<S> {
     /// Creates one mounted catalog surface from owned state and a pure view function.
     #[must_use]
     pub fn new<F, V>(
@@ -119,29 +119,28 @@ impl<S: Clone + Serialize + 'static> Application<S> {
             view,
             current,
         } = self;
-        let current = current.as_mut().ok_or(ApplicationError::NotStarted)?;
-        if message.action.surface_id != current.surface.surface_id {
+        let current_view = current.as_ref().ok_or(ApplicationError::NotStarted)?;
+        if message.action.surface_id != current_view.surface.surface_id {
             return Err(ApplicationError::UnexpectedSurface {
-                expected: current.surface.surface_id.clone(),
+                expected: current_view.surface.surface_id.clone(),
                 actual: message.action.surface_id,
             });
         }
 
         let name = message.action.name.clone();
-        let handler = current
+        let handler = current_view
             .handlers
-            .get_mut(&name)
+            .get(&name)
             .ok_or_else(|| ApplicationError::InvalidAction(format!("unknown action {name:?}")))?;
-        let mut next_state = state.clone();
-        handler
-            .run(&mut next_state, message.action)
+        let next_state = handler
+            .run(state, message.action)
             .await
             .map_err(|error| ApplicationError::InvalidAction(error.to_string()))?;
         let next = render_current(surface_id, catalog_id, view, &next_state)?;
         validate(&next.surface)?;
-        let messages = transition_messages(&current.surface, &next.surface);
+        let messages = transition_messages(&current_view.surface, &next.surface);
+        *current = Some(next);
         *state = next_state;
-        *current = next;
         Ok(messages)
     }
 
@@ -197,8 +196,10 @@ fn transition_messages(
     current: &CreateSurface,
     next: &CreateSurface,
 ) -> Vec<AgentToRendererMessage> {
-    let mut messages =
-        vec![UpdateDataModel::root(&next.surface_id, data_model(next)).into_message()];
+    let mut messages = data::updates(current, next)
+        .into_iter()
+        .map(UpdateDataModel::into_message)
+        .collect::<Vec<_>>();
     let components = changed_components(current, next);
     if !components.is_empty() {
         messages.push(UpdateComponents::new(&next.surface_id, components).into_message());

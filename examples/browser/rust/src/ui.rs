@@ -72,7 +72,7 @@ fn form_actions(name: DataBinding) -> impl Into<Element> + 'static {
         Button::new(
             Text::new("Submit"),
             Event::new("submit_name").context("name", name).on(
-                |state: &mut ProfileApp, action| -> ActionResult {
+                |state: &ProfileApp, action| -> ActionResult<ProfileApp> {
                     let name = action
                         .context
                         .get("name")
@@ -80,19 +80,18 @@ fn form_actions(name: DataBinding) -> impl Into<Element> + 'static {
                         .map(str::trim)
                         .filter(|name| !name.is_empty())
                         .ok_or("submit_name needs a non-empty string context.name")?;
-                    name.clone_into(&mut state.name);
-                    state.submissions = state.submissions.saturating_add(1);
-                    state.phase = Phase::Submitted;
-                    Ok(())
+                    Ok(ProfileApp {
+                        phase: Phase::Submitted,
+                        name: name.to_owned(),
+                        submissions: state.submissions.saturating_add(1),
+                    })
                 },
             ),
         )
         .variant(ButtonVariant::Primary),
         Button::new(
             Text::new("Reset"),
-            Event::new("reset_form").on(|state: &mut ProfileApp, _| {
-                *state = ProfileApp::default();
-            }),
+            Event::new("reset_form").on(|_: &ProfileApp, _| ProfileApp::default()),
         )
         .variant(ButtonVariant::Borderless),
     ))
@@ -143,12 +142,18 @@ mod tests {
             assert_eq!(app.state().phase(), Phase::Submitted);
             assert_eq!(app.state().name(), "Ada");
             assert_eq!(app.state().submissions(), 1);
-            assert!(matches!(
-                &updates[0],
+            assert!(updates.iter().any(|message| matches!(
+                message,
                 AgentToRendererMessage::UpdateDataModel(message)
-                    if message.update_data_model.value["name"] == json!("Ada")
-                    && message.update_data_model.value["submissions"] == json!(1)
-            ));
+                    if message.update_data_model.path.as_deref() == Some("/name")
+                        && message.update_data_model.value == json!("Ada")
+            )));
+            assert!(updates.iter().any(|message| matches!(
+                message,
+                AgentToRendererMessage::UpdateDataModel(message)
+                    if message.update_data_model.path.as_deref() == Some("/submissions")
+                        && message.update_data_model.value == json!(1)
+            )));
 
             app.handle(action("reset_form", json!({})))
                 .await

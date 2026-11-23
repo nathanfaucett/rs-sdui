@@ -2,7 +2,7 @@ use std::{any::Any, fmt};
 
 use a2ui_author::{Action, ActionEvent, Event, FunctionCall};
 
-use crate::{Effect, Handler, IntoActionResult, MaybeSend};
+use crate::{Effect, Handler, IntoActionResult, MaybeSend, MaybeSync};
 
 #[cfg(not(target_arch = "wasm32"))]
 type BoxHandler = Box<dyn Any + Send>;
@@ -86,31 +86,31 @@ pub trait EventExt {
     /// Declares a synchronous transition beside the event that triggers it.
     fn on<S, F, R>(self, handler: F) -> EventHandler
     where
-        S: 'static,
-        F: FnMut(&mut S, ActionEvent) -> R + MaybeSend + 'static,
-        R: IntoActionResult + MaybeSend;
+        S: MaybeSend + MaybeSync + 'static,
+        F: Fn(&S, ActionEvent) -> R + MaybeSend + MaybeSync + 'static,
+        R: IntoActionResult<S> + MaybeSend;
 
     /// Declares an asynchronous I/O effect beside the event that triggers it.
     fn on_effect<S, F>(self, handler: F) -> EventHandler
     where
-        S: MaybeSend + 'static,
-        F: FnMut(&mut S, ActionEvent) -> Effect<S> + MaybeSend + 'static;
+        S: MaybeSend + MaybeSync + 'static,
+        F: Fn(&S, ActionEvent) -> Effect<S> + MaybeSend + MaybeSync + 'static;
 }
 
 impl EventExt for Event {
     fn on<S, F, R>(self, handler: F) -> EventHandler
     where
-        S: 'static,
-        F: FnMut(&mut S, ActionEvent) -> R + MaybeSend + 'static,
-        R: IntoActionResult + MaybeSend,
+        S: MaybeSend + MaybeSync + 'static,
+        F: Fn(&S, ActionEvent) -> R + MaybeSend + MaybeSync + 'static,
+        R: IntoActionResult<S> + MaybeSend,
     {
         EventHandler::new(self, Handler::action(handler))
     }
 
     fn on_effect<S, F>(self, handler: F) -> EventHandler
     where
-        S: MaybeSend + 'static,
-        F: FnMut(&mut S, ActionEvent) -> Effect<S> + MaybeSend + 'static,
+        S: MaybeSend + MaybeSync + 'static,
+        F: Fn(&S, ActionEvent) -> Effect<S> + MaybeSend + MaybeSync + 'static,
     {
         EventHandler::new(self, Handler::effect(handler))
     }

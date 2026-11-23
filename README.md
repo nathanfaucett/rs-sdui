@@ -30,7 +30,7 @@ Standard events and their state transitions are declared together in the view. N
 
 ```rust
 use a2ui_app::Application;
-use a2ui_author::{ActionMessage, Event};
+use a2ui_author::{ActionMessage, DataBinding, Event};
 use a2ui_basic::v1::{self, Button, Column, Text};
 use a2ui_view::{Element, EventExt};
 use serde::Serialize;
@@ -41,16 +41,18 @@ struct Counter {
 }
 
 // Reusable component: typed props in, a declarative view out.
-fn value_label(value: i64) -> impl Into<Element> {
-    Text::new(value.to_string())
+fn value_label(path: &str) -> impl Into<Element> + 'static {
+    Text::new(DataBinding::new(path))
 }
 
-fn counter_view(state: &Counter) -> Element {
+fn counter_view(_state: &Counter) -> Element {
     Column::new((
-        value_label(state.value),
+        value_label("/value"),
         Button::new(
             Text::new("Increment"),
-            Event::new("increment").on(|state: &mut Counter, _action| state.value += 1),
+            Event::new("increment").on(|state: &Counter, _action| Counter {
+                            value: state.value + 1,
+                        }),
         ),
     ))
     .into()
@@ -73,9 +75,9 @@ The view is a pure description. The runtime generates all component IDs, flatten
 
 Component functions can return a concrete generated type, `impl Into<Element>`, or `Element` when branches need type erasure. Tuples hold heterogeneous children. Arrays and `Vec` hold homogeneous children. `Children` can also collect an iterator of generated or erased views. No component macro is required.
 
-`Event::context` keeps standard A2UI expressions and data bindings in the JSON. The official renderer evaluates them before sending the action. `.on(...)` attaches a Rust-only callback; neither the callback nor any custom action metadata is serialized.
+`Event::context` keeps standard A2UI expressions and data bindings in the JSON. The official renderer evaluates them before sending the action. `.on(...)` attaches a pure Rust transition from the current state and action to the next state. Neither the callback nor any custom action metadata is serialized.
 
-Use `.on_effect(...)` for I/O and other side effects. The effect returns a closure that applies its result to state, so ordinary errors work with `?`:
+Use `.on_effect(...)` for I/O and other side effects. The effect also returns the next state, so ordinary errors work with `?`:
 
 ```rust,ignore
 fn load_button(client: Arc<Client>) -> impl Into<Element> {
@@ -85,14 +87,75 @@ fn load_button(client: Arc<Client>) -> impl Into<Element> {
             let client = client.clone();
             Effect::new(async move {
                 let value = client.load().await?;
-                Ok(move |state: &mut Counter| state.value = value)
+                Ok(Counter { value })
             })
         }),
     )
 }
 ```
 
-The action handler can also update state before returning `Effect::new(...)`. Native effects are `Send`; WASM effects are local. `handle()` drives the future but does not spawn it. Choose Tokio, another executor, a local WASM task, or direct `.await` in the application.
+The effect callback receives the current state and action. Native effects are `Send`; WASM effects are local. `handle()` drives the future but does not spawn it. Choose Tokio, another executor, a local WASM task, or direct `.await` in the application.
+
+### Complete JSON tree
+
+Serialize `start()` to inspect the entire UI:
+
+```rust
+let complete_a2ui_json = serde_json::to_string_pretty(&app.start()?)?;
+```
+
+A2UI represents the tree as a flat component list with generated ID references. For the counter above, the initial message is:
+
+```json
+[
+  {
+    "version": "1.0",
+    "createSurface": {
+      "surfaceId": "counter",
+      "catalogId": "https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json",
+      "components": [
+        {
+          "id": "root",
+          "component": "Column",
+          "children": ["root_0", "root_1"]
+        },
+        {
+          "id": "root_0",
+          "component": "Text",
+          "text": { "@path": "/value" }
+        },
+        {
+          "id": "root_1",
+          "component": "Button",
+          "child": "root_1_0",
+          "action": { "event": { "name": "increment" } }
+        },
+        { "id": "root_1_0", "component": "Text", "text": "Increment" }
+      ],
+      "dataModel": { "value": 0 }
+    }
+  }
+]
+```
+
+The complete visual tree and state are JSON. Rust transitions and I/O callbacks are application behavior and intentionally have no A2UI JSON representation. The exact multi-component wire shape is also asserted in `crates/a2ui-app/tests/application.rs`.
+
+Incrementing this counter emits only:
+
+```json
+[
+  {
+    "version": "1.0",
+    "updateDataModel": {
+      "surfaceId": "counter",
+      "path": "/value",
+      "value": 1
+    }
+  }
+]
+```
+
+No component update is needed because the existing text binding reads the new value.
 
 Serialize each returned `AgentToRendererMessage` in order. Send it through a local call, WebSocket, SSE, HTTP, or another application-owned transport. This workspace intentionally has no transport abstraction or transport dependency.
 
@@ -100,7 +163,10 @@ Serialize each returned `AgentToRendererMessage` in order. Send it through a loc
 
 - `start()` validates the declarative view and emits one complete `createSurface`. Serialize it directly to a file, stream, or transport.
 - `handle()` runs a named action. An action error, state-serialization error, or invalid next view rolls back Rust state. External side effects cannot roll back.
-- Each completed action emits a root `updateDataModel`, even if the Rust view is unchanged. A2UI inputs can change renderer-local data without notifying Rust. The application state is authoritative after each action.
+- Changed state emits path-scoped `updateDataModel` messages. Arrays and scalar values update at their exact paths.
+- Removing an object key replaces the smallest parent object because A2UI has no key-deletion message. Other changes do not send the root model.
+- Bound paths are refreshed after each completed action. A2UI inputs can change renderer-local data without notifying Rust, so these small updates restore application-owned values.
+- Unchanged, unbound state emits no data-model messages.
 - Only added or changed component definitions are sent in `updateComponents`.
 - Removed component definitions are left unreachable in the renderer map. A2UI has no component-deletion message. This avoids unnecessary surface resets and focus loss.
 

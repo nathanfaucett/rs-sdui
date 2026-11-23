@@ -3,16 +3,11 @@ use std::{fmt, pin::Pin};
 use crate::{ActionResult, EffectResult, MaybeSend};
 
 #[cfg(not(target_arch = "wasm32"))]
-type Update<S> = Box<dyn FnOnce(&mut S) + Send>;
+type EffectFuture<S> = Pin<Box<dyn Future<Output = EffectResult<S>> + Send>>;
 #[cfg(target_arch = "wasm32")]
-type Update<S> = Box<dyn FnOnce(&mut S)>;
+type EffectFuture<S> = Pin<Box<dyn Future<Output = EffectResult<S>>>>;
 
-#[cfg(not(target_arch = "wasm32"))]
-type EffectFuture<S> = Pin<Box<dyn Future<Output = EffectResult<Update<S>>> + Send>>;
-#[cfg(target_arch = "wasm32")]
-type EffectFuture<S> = Pin<Box<dyn Future<Output = EffectResult<Update<S>>>>>;
-
-/// An owned asynchronous operation followed by one state update.
+/// An owned asynchronous operation that returns the next application state.
 ///
 /// Native effects are `Send`. WASM effects are local.
 pub struct Effect<S> {
@@ -20,30 +15,24 @@ pub struct Effect<S> {
 }
 
 impl<S> Effect<S> {
-    /// Creates an effect from a future that returns a state-update closure.
+    /// Creates an effect from a future that returns the next state.
     #[must_use]
-    pub fn new<F, U>(future: F) -> Self
+    pub fn new<F>(future: F) -> Self
     where
-        F: Future<Output = EffectResult<U>> + MaybeSend + 'static,
-        U: FnOnce(&mut S) + MaybeSend + 'static,
+        F: Future<Output = EffectResult<S>> + MaybeSend + 'static,
     {
         Self {
-            future: Box::pin(async move {
-                let update = future.await?;
-                Ok(Box::new(update) as Update<S>)
-            }),
+            future: Box::pin(future),
         }
     }
 
-    /// Drives the effect and applies its state update.
+    /// Drives the effect and returns the next state.
     ///
     /// # Errors
     ///
-    /// Returns the effect error without applying the state update.
-    pub async fn run(self, state: &mut S) -> ActionResult {
-        let update = self.future.await?;
-        update(state);
-        Ok(())
+    /// Returns the effect error without producing a state transition.
+    pub async fn run(self) -> ActionResult<S> {
+        self.future.await
     }
 }
 

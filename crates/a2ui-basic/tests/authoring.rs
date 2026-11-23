@@ -8,7 +8,7 @@ fn confirm_button() -> impl Into<Element> + 'static {
         Text::new("Confirm booking"),
         Event::new("confirm_booking")
             .context("price", DataBinding::new("/price"))
-            .on(|(): &mut (), _| {}),
+            .on(|(): &(), _| ()),
     )
     .variant(ButtonVariant::Primary)
 }

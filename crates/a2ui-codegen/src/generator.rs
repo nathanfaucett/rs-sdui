@@ -102,8 +102,8 @@ fn render_catalog(module: &str, document: &Value) -> Result<TokenStream, Box<dyn
             #[must_use]
             pub fn surface(
                 surface_id: impl Into<String>,
-            ) -> ::a2ui_author::CreateSurface {
-                ::a2ui_author::CreateSurface::new(surface_id, CATALOG_ID)
+            ) -> ::a2ui_view::Surface {
+                ::a2ui_view::Surface::new(surface_id, CATALOG_ID)
             }
 
             #(#components)*
@@ -181,6 +181,7 @@ enum PropertyKind {
     DynamicStringList,
     DynamicValue,
     ChildList,
+    Child,
     Action,
     FunctionCall,
     DataBinding,
@@ -250,9 +251,22 @@ fn render_component(
     let required_setters = required.iter().map(|property| {
         let wire_name = &property.wire_name;
         let rust_name = &property.rust_name;
-        let value = input_value(&property.kind, rust_name);
-        quote! {
-            let component = component.property(#wire_name, #value);
+        match &property.kind {
+            PropertyKind::Child => quote! {
+                let element = element.child(#wire_name, #rust_name);
+            },
+            PropertyKind::ChildList => quote! {
+                let element = element.children(#wire_name, #rust_name);
+            },
+            PropertyKind::Action => quote! {
+                let element = element.action(#wire_name, #rust_name);
+            },
+            _ => {
+                let value = input_value(&property.kind, rust_name);
+                quote! {
+                    let element = element.property(#wire_name, #value);
+                }
+            }
         }
     });
     let optional_setters = optional.iter().map(|property| {
@@ -261,15 +275,47 @@ fn render_component(
         let input = input_type(&property.kind);
         let value = input_value(&property.kind, rust_name);
         let docs = &property.docs;
-        quote! {
-            #docs
-            pub fn #rust_name(mut self, #rust_name: #input) -> Self {
-                self.0 = self.0.property(#wire_name, #value);
-                self
-            }
+        match &property.kind {
+            PropertyKind::Child => quote! {
+                #docs
+                pub fn #rust_name(mut self, #rust_name: #input) -> Self {
+                    self.0 = self.0.child(#wire_name, #rust_name);
+                    self
+                }
+            },
+            PropertyKind::ChildList => quote! {
+                #docs
+                pub fn #rust_name(mut self, #rust_name: #input) -> Self {
+                    self.0 = self.0.children(#wire_name, #rust_name);
+                    self
+                }
+            },
+            PropertyKind::Action => quote! {
+                #docs
+                pub fn #rust_name(mut self, #rust_name: #input) -> Self {
+                    self.0 = self.0.action(#wire_name, #rust_name);
+                    self
+                }
+            },
+            _ => quote! {
+                #docs
+                pub fn #rust_name(mut self, #rust_name: #input) -> Self {
+                    self.0 = self.0.property(#wire_name, #value);
+                    self
+                }
+            },
         }
     });
     let definitions = properties.iter().map(|property| &property.definition);
+    let default_impl = required.is_empty().then(|| {
+        quote! {
+            impl Default for #builder {
+                fn default() -> Self {
+                    Self::new()
+                }
+            }
+        }
+    });
     let check_setter = flat.checkable.then(|| {
         quote! {
             pub fn checks(
@@ -289,22 +335,23 @@ fn render_component(
     Ok(quote! {
         #(#definitions)*
         #docs
-        #[derive(Clone, Debug)]
+        #[derive(Debug)]
         #[must_use]
-        pub struct #builder(::a2ui_author::Component);
+        pub struct #builder(::a2ui_view::Element);
 
         impl #builder {
             pub fn new(
-                id: impl Into<String>,
                 #(#parameters),*
             ) -> Self {
-                let component = ::a2ui_author::Component::new(id, #name);
+                let element = ::a2ui_view::Element::new(
+                    ::a2ui_author::Component::new("", #name)
+                );
                 #(#required_setters)*
-                Self(component)
+                Self(element)
             }
 
             pub fn catalog_id(mut self, catalog_id: impl Into<String>) -> Self {
-                self.0 = self.0.catalog_id(catalog_id);
+                self.0 = self.0.property("@catalogId", catalog_id.into());
                 self
             }
 
@@ -312,11 +359,13 @@ fn render_component(
             #check_setter
         }
 
-        impl From<#builder> for ::a2ui_author::Component {
+        impl From<#builder> for ::a2ui_view::Element {
             fn from(value: #builder) -> Self {
                 value.0
             }
         }
+
+        #default_impl
     })
 }
 
@@ -448,10 +497,11 @@ fn property_kind(schema: &Value) -> PropertyKind {
             "DynamicStringList" => PropertyKind::DynamicStringList,
             "DynamicValue" => PropertyKind::DynamicValue,
             "ChildList" => PropertyKind::ChildList,
+            "Child" | "ComponentId" => PropertyKind::Child,
             "Action" => PropertyKind::Action,
             "FunctionCall" => PropertyKind::FunctionCall,
             "DataBinding" => PropertyKind::DataBinding,
-            "Child" | "ComponentId" => PropertyKind::String,
+
             _ => PropertyKind::Json,
         };
     }
@@ -518,8 +568,9 @@ fn input_type(kind: &PropertyKind) -> TokenStream {
         PropertyKind::DynamicBoolean => quote!(impl Into<::a2ui_author::DynamicBoolean>),
         PropertyKind::DynamicStringList => quote!(impl Into<::a2ui_author::DynamicStringList>),
         PropertyKind::DynamicValue => quote!(impl Into<::a2ui_author::DynamicValue>),
-        PropertyKind::ChildList => quote!(impl Into<::a2ui_author::ChildList>),
-        PropertyKind::Action => quote!(impl Into<::a2ui_author::Action>),
+        PropertyKind::ChildList => quote!(impl ::a2ui_view::IntoChildren),
+        PropertyKind::Child => quote!(impl Into<::a2ui_view::Element>),
+        PropertyKind::Action => quote!(impl Into<::a2ui_view::ViewAction>),
         PropertyKind::FunctionCall => quote!(impl Into<::a2ui_author::FunctionCall>),
         PropertyKind::DataBinding => quote!(impl Into<::a2ui_author::DataBinding>),
         PropertyKind::String => quote!(impl Into<String>),
@@ -550,6 +601,9 @@ fn input_value(kind: &PropertyKind, name: &Ident) -> TokenStream {
         }
         PropertyKind::ChildList => {
             quote!(::serde_json::Value::from(Into::<::a2ui_author::ChildList>::into(#name)))
+        }
+        PropertyKind::Child => {
+            quote!(::serde_json::Value::String(Into::<String>::into(#name)))
         }
         PropertyKind::Action => {
             quote!(::serde_json::Value::from(Into::<::a2ui_author::Action>::into(#name)))

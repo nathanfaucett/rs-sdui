@@ -1,0 +1,25 @@
+[package]
+name = "a2ui-app"
+description = "Predictable state machines that emit standard A2UI v1.0 messages"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["a2ui", "state", "ui", "wasm"]
+categories = ["gui", "wasm"]
+
+[dependencies]
+a2ui-author.workspace = true
+a2ui-view.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+unicode-ident.workspace = true
+
+[dev-dependencies]
+a2ui-basic.workspace = true
+futures.workspace = true
+
+[lints]
+workspace = true

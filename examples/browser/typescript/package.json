@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:wasm": "wasm-pack build --target web --out-dir src/pkg --out-name browser .",
+    "build:wasm": "wasm-pack build --target web --out-dir ../typescript/src/pkg --out-name browser ../rust",
     "predev": "npm run build:wasm",
     "dev": "vite",
     "build": "npm run build:wasm && vite build",

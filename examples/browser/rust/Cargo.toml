@@ -13,10 +13,19 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+a2ui-app.workspace = true
 a2ui-author.workspace = true
 a2ui-basic.workspace = true
+a2ui-view.workspace = true
+serde.workspace = true
 serde_json.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen.workspace = true
+wasm-bindgen-futures.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+futures.workspace = true
 
 [lints]
 workspace = true

@@ -1,22 +1,25 @@
 use a2ui_author::{DataBinding, DataModel, Event};
 use a2ui_basic::v1::{self, Button, ButtonVariant, Column, Text};
+use a2ui_view::{Element, EventExt};
 use serde_json::json;
 
+fn confirm_button() -> impl Into<Element> + 'static {
+    Button::new(
+        Text::new("Confirm booking"),
+        Event::new("confirm_booking")
+            .context("price", DataBinding::new("/price"))
+            .on(|(): &mut (), _| {}),
+    )
+    .variant(ButtonVariant::Primary)
+}
+
 #[test]
-fn generated_builders_emit_standard_a2ui_messages() {
+fn generated_components_render_nested_standard_a2ui_messages() {
     let message = v1::surface("booking")
-        .components([
-            Column::new("root", ["title", "submit"]).into(),
-            Text::new("title", DataBinding::new("/trip/name")).into(),
-            Text::new("submit_label", "Confirm booking").into(),
-            Button::new(
-                "submit",
-                "submit_label",
-                Event::new("confirm_booking").context("price", DataBinding::new("/price")),
-            )
-            .variant(ButtonVariant::Primary)
-            .into(),
-        ])
+        .root(Column::new((
+            Text::new(DataBinding::new("/trip/name")),
+            confirm_button(),
+        )))
         .data_model(
             DataModel::new()
                 .with("trip", json!({"name": "Berlin to San Francisco"}))
@@ -32,13 +35,12 @@ fn generated_builders_emit_standard_a2ui_messages() {
                 "surfaceId": "booking",
                 "catalogId": v1::CATALOG_ID,
                 "components": [
-                    {"id": "root", "component": "Column", "children": ["title", "submit"]},
-                    {"id": "title", "component": "Text", "text": {"@path": "/trip/name"}},
-                    {"id": "submit_label", "component": "Text", "text": "Confirm booking"},
+                    {"id": "root", "component": "Column", "children": ["root_0", "root_1"]},
+                    {"id": "root_0", "component": "Text", "text": {"@path": "/trip/name"}},
                     {
-                        "id": "submit",
+                        "id": "root_1",
                         "component": "Button",
-                        "child": "submit_label",
+                        "child": "root_1_0",
                         "action": {
                             "event": {
                                 "name": "confirm_booking",
@@ -46,7 +48,8 @@ fn generated_builders_emit_standard_a2ui_messages() {
                             }
                         },
                         "variant": "primary"
-                    }
+                    },
+                    {"id": "root_1_0", "component": "Text", "text": "Confirm booking"}
                 ],
                 "dataModel": {
                     "trip": {"name": "Berlin to San Francisco"},

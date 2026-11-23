@@ -1,0 +1,18 @@
+[package]
+name = "a2ui-view"
+description = "Declarative A2UI views with typed component and event composition"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["a2ui", "ui", "declarative", "wasm"]
+categories = ["gui", "wasm"]
+
+[dependencies]
+a2ui-author.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

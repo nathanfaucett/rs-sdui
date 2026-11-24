@@ -20,6 +20,22 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     modulePreload: { polyfill: false },
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: "a2ui-renderer",
+              test: /node_modules[\\/]@a2ui[\\/]lit[\\/]/,
+            },
+            {
+              name: "a2ui-core",
+              test: /node_modules[\\/]@a2ui[\\/]web_core[\\/]/,
+            },
+          ],
+        },
+      },
+    },
   },
   worker: {
     format: "es",

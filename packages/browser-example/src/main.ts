@@ -22,14 +22,13 @@ let nextInstance = 1;
 const connections = new Set<() => void>();
 
 function workerTransport(session: string): Transport {
-  return new SharedWorkerTransport(() => {
-    const url = new URL("./application-worker.ts", import.meta.url);
-    url.searchParams.set("session", session);
-    return new SharedWorker(url, {
-      type: "module",
-      name: `a2ui-${session}`,
-    });
-  });
+  return new SharedWorkerTransport(
+    () =>
+      new SharedWorker(new URL("./application-worker.ts", import.meta.url), {
+        type: "module",
+        name: `a2ui-${session}`,
+      })
+  );
 }
 
 function websocketTransport(session: string): Transport {

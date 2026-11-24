@@ -20,11 +20,11 @@ pub struct Element {
     handlers: Vec<EventHandler>,
 }
 
-/// The standard wire components and Rust-only handlers produced by a view.
+/// The standard wire components and source-scoped Rust handlers produced by a view.
 #[derive(Debug)]
 pub struct ElementParts {
     pub components: Vec<Component>,
-    pub handlers: Vec<EventHandler>,
+    pub handlers: Vec<(String, EventHandler)>,
 }
 
 #[derive(Debug)]
@@ -208,7 +208,11 @@ fn flatten(element: Element, path: &str, output: &mut ElementParts) {
         relations,
         handlers,
     } = element;
-    output.handlers.extend(handlers);
+    output.handlers.extend(
+        handlers
+            .into_iter()
+            .map(|handler| (path.to_owned(), handler)),
+    );
     component = component.property("id", path);
 
     let mut descendants = Vec::new();

@@ -3,10 +3,23 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>A2UI Todo List</title>
+        <title>A2UI Shared Todo Application</title>
     </head>
     <body>
-        <main id="app"></main>
+        <header class="app-header">
+            <h1>Shared A2UI todo application</h1>
+            <p>Two official renderers connected to one Rust application.</p>
+        </header>
+        <main class="renderers">
+            <section class="renderer-pane" aria-labelledby="renderer-a-title">
+                <h2 id="renderer-a-title">Renderer A</h2>
+                <div id="renderer-a"></div>
+            </section>
+            <section class="renderer-pane" aria-labelledby="renderer-b-title">
+                <h2 id="renderer-b-title">Renderer B</h2>
+                <div id="renderer-b"></div>
+            </section>
+        </main>
         <script type="module" src="/src/main.ts"></script>
     </body>
 </html>

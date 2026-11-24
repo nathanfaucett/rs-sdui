@@ -17,6 +17,9 @@ export default defineConfig({
     emptyOutDir: true,
     modulePreload: { polyfill: false },
   },
+  worker: {
+    format: "es",
+  },
   server: {
     host: "127.0.0.1",
     port,

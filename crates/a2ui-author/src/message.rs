@@ -5,7 +5,11 @@
     reason = "fluent authoring methods return new values"
 )]
 
-use serde::{Deserialize, Serialize};
+use std::{error::Error, fmt};
+
+use serde::{
+    Deserialize, Deserializer, Serialize, Serializer, de::Error as _, ser::SerializeStruct,
+};
 use serde_json::{Map, Value};
 
 use crate::{Component, FunctionCall};
@@ -225,56 +229,166 @@ pub struct DeleteSurfaceMessage {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct FunctionError {
     pub code: String,
     pub message: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+impl FunctionError {
+    pub const INVALID_FUNCTION_CALL: &'static str = "INVALID_FUNCTION_CALL";
+
+    fn invalid_function_call() -> Self {
+        Self {
+            code: Self::INVALID_FUNCTION_CALL.to_owned(),
+            message: "callFunction.catalogId is required".to_owned(),
+        }
+    }
+}
+
+impl fmt::Display for FunctionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.code, self.message)
+    }
+}
+
+impl Error for FunctionError {}
+
+fn require_catalog_id(call_function: FunctionCall) -> Result<FunctionCall, FunctionError> {
+    if call_function.catalog_id.is_none() {
+        Err(FunctionError::invalid_function_call())
+    } else {
+        Ok(call_function)
+    }
+}
+
+fn deserialize_present<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(deserializer).map(Some)
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum FunctionResult {
+    Value(Value),
+    Error(FunctionError),
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct FunctionResponse {
-    pub function_call_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub value: Option<Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<FunctionError>,
+    function_call_id: String,
+    result: FunctionResult,
 }
 
 impl FunctionResponse {
     pub fn success(function_call_id: impl Into<String>, value: impl Into<Value>) -> Self {
         Self {
             function_call_id: function_call_id.into(),
-            value: Some(value.into()),
-            error: None,
+            result: FunctionResult::Value(value.into()),
         }
     }
 
     pub fn failure(function_call_id: impl Into<String>, error: FunctionError) -> Self {
         Self {
             function_call_id: function_call_id.into(),
-            value: None,
-            error: Some(error),
+            result: FunctionResult::Error(error),
         }
+    }
+
+    pub fn function_call_id(&self) -> &str {
+        &self.function_call_id
+    }
+
+    pub const fn result(&self) -> &FunctionResult {
+        &self.result
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+impl Serialize for FunctionResponse {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("FunctionResponse", 2)?;
+        state.serialize_field("functionCallId", &self.function_call_id)?;
+        match &self.result {
+            FunctionResult::Value(value) => state.serialize_field("value", value)?,
+            FunctionResult::Error(error) => state.serialize_field("error", error)?,
+        }
+        state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for FunctionResponse {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase", deny_unknown_fields)]
+        struct Wire {
+            function_call_id: String,
+            #[serde(default, deserialize_with = "deserialize_present")]
+            value: Option<Value>,
+            #[serde(default, deserialize_with = "deserialize_present")]
+            error: Option<FunctionError>,
+        }
+
+        let wire = Wire::deserialize(deserializer)?;
+        let result = match (wire.value, wire.error) {
+            (Some(value), None) => FunctionResult::Value(value),
+            (None, Some(error)) => FunctionResult::Error(error),
+            _ => {
+                return Err(D::Error::custom(
+                    "FunctionResponse requires exactly one of value or error",
+                ));
+            }
+        };
+        Ok(Self {
+            function_call_id: wire.function_call_id,
+            result,
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CallRendererFunction {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub surface_id: Option<String>,
-    pub function_call_id: String,
-    pub call_function: FunctionCall,
+    surface_id: Option<String>,
+    function_call_id: String,
+    call_function: FunctionCall,
 }
 
 impl CallRendererFunction {
-    pub fn new(function_call_id: impl Into<String>, call_function: FunctionCall) -> Self {
-        Self {
+    /// Creates an agent-to-renderer call with a required resolved catalog ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns `INVALID_FUNCTION_CALL` when `call_function.catalog_id` is absent.
+    pub fn new(
+        function_call_id: impl Into<String>,
+        call_function: FunctionCall,
+    ) -> Result<Self, FunctionError> {
+        Ok(Self {
             surface_id: None,
             function_call_id: function_call_id.into(),
-            call_function,
-        }
+            call_function: require_catalog_id(call_function)?,
+        })
+    }
+
+    pub fn surface_id_ref(&self) -> Option<&str> {
+        self.surface_id.as_deref()
+    }
+
+    pub fn function_call_id(&self) -> &str {
+        &self.function_call_id
+    }
+
+    pub const fn call_function(&self) -> &FunctionCall {
+        &self.call_function
     }
 
     pub fn surface_id(mut self, surface_id: impl Into<String>) -> Self {
@@ -290,15 +404,36 @@ impl CallRendererFunction {
     }
 }
 
+impl<'de> Deserialize<'de> for CallRendererFunction {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase", deny_unknown_fields)]
+        struct Wire {
+            surface_id: Option<String>,
+            function_call_id: String,
+            call_function: FunctionCall,
+        }
+
+        let wire = Wire::deserialize(deserializer)?;
+        let mut call =
+            Self::new(wire.function_call_id, wire.call_function).map_err(D::Error::custom)?;
+        call.surface_id = wire.surface_id;
+        Ok(call)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CallRendererFunctionMessage {
     pub version: ProtocolVersion,
     pub call_renderer_function: CallRendererFunction,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AgentFunctionResponseMessage {
     pub version: ProtocolVersion,
     pub agent_function_response: FunctionResponse,
@@ -352,23 +487,73 @@ pub struct ActionMessage {
     pub action: ActionEvent,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CallAgentFunction {
-    pub surface_id: String,
-    pub function_call_id: String,
-    pub call_function: FunctionCall,
+    surface_id: String,
+    function_call_id: String,
+    call_function: FunctionCall,
+}
+
+impl CallAgentFunction {
+    /// Creates a renderer-to-agent call with a required resolved catalog ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns `INVALID_FUNCTION_CALL` when `call_function.catalog_id` is absent.
+    pub fn new(
+        surface_id: impl Into<String>,
+        function_call_id: impl Into<String>,
+        call_function: FunctionCall,
+    ) -> Result<Self, FunctionError> {
+        Ok(Self {
+            surface_id: surface_id.into(),
+            function_call_id: function_call_id.into(),
+            call_function: require_catalog_id(call_function)?,
+        })
+    }
+
+    pub fn surface_id(&self) -> &str {
+        &self.surface_id
+    }
+
+    pub fn function_call_id(&self) -> &str {
+        &self.function_call_id
+    }
+
+    pub const fn call_function(&self) -> &FunctionCall {
+        &self.call_function
+    }
+}
+
+impl<'de> Deserialize<'de> for CallAgentFunction {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase", deny_unknown_fields)]
+        struct Wire {
+            surface_id: String,
+            function_call_id: String,
+            call_function: FunctionCall,
+        }
+
+        let wire = Wire::deserialize(deserializer)?;
+        Self::new(wire.surface_id, wire.function_call_id, wire.call_function)
+            .map_err(D::Error::custom)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CallAgentFunctionMessage {
     pub version: ProtocolVersion,
     pub call_agent_function: CallAgentFunction,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RendererFunctionResponseMessage {
     pub version: ProtocolVersion,
     pub renderer_function_response: FunctionResponse,
@@ -492,5 +677,277 @@ mod tests {
             serde_json::to_value(event).expect("event must serialize"),
             json!({"name": "confirm_booking", "context": {"price": {"@path": "/price"}}})
         );
+    }
+
+    #[test]
+    fn function_response_success_has_exact_json_and_round_trips() {
+        let expected = json!({
+            "functionCallId": "call-1",
+            "value": {"approved": true}
+        });
+        let response = FunctionResponse::success("call-1", json!({"approved": true}));
+
+        assert_eq!(response.function_call_id(), "call-1");
+        assert_eq!(
+            response.result(),
+            &FunctionResult::Value(json!({"approved": true}))
+        );
+        assert_eq!(
+            serde_json::to_value(&response).expect("response must serialize"),
+            expected
+        );
+        let decoded: FunctionResponse =
+            serde_json::from_value(expected.clone()).expect("response must deserialize");
+        assert_eq!(decoded, response);
+        assert_eq!(
+            serde_json::to_value(response.into_agent_message()).expect("message must serialize"),
+            json!({"version": "1.0", "agentFunctionResponse": expected})
+        );
+    }
+
+    #[test]
+    fn function_response_error_has_exact_json_and_round_trips() {
+        let expected = json!({
+            "functionCallId": "call-2",
+            "error": {"code": "NOT_FOUND", "message": "No booking"}
+        });
+        let error = FunctionError {
+            code: "NOT_FOUND".to_owned(),
+            message: "No booking".to_owned(),
+        };
+        let response = FunctionResponse::failure("call-2", error.clone());
+
+        assert_eq!(response.result(), &FunctionResult::Error(error));
+        assert_eq!(
+            serde_json::to_value(&response).expect("response must serialize"),
+            expected
+        );
+        let decoded: FunctionResponse =
+            serde_json::from_value(expected.clone()).expect("response must deserialize");
+        assert_eq!(decoded, response);
+        assert_eq!(
+            serde_json::to_value(response.into_renderer_message()).expect("message must serialize"),
+            json!({"version": "1.0", "rendererFunctionResponse": expected})
+        );
+    }
+
+    #[test]
+    fn function_response_rejects_missing_id_both_neither_and_unknown_fields() {
+        let invalid = [
+            json!({"value": 1}),
+            json!({"functionCallId": "call-1"}),
+            json!({
+                "functionCallId": "call-1",
+                "value": 1,
+                "error": {"code": "FAILED", "message": "Failed"}
+            }),
+            json!({"functionCallId": "call-1", "value": 1, "unknown": true}),
+            json!({
+                "functionCallId": "call-1",
+                "error": {"code": "FAILED", "message": "Failed", "unknown": true}
+            }),
+        ];
+
+        for input in invalid {
+            assert!(
+                serde_json::from_value::<FunctionResponse>(input.clone()).is_err(),
+                "input must be rejected: {input}"
+            );
+        }
+    }
+
+    #[test]
+    fn function_response_accepts_null_as_its_value() {
+        let expected = json!({"functionCallId": "call-1", "value": null});
+        let response: FunctionResponse =
+            serde_json::from_value(expected.clone()).expect("null value must deserialize");
+
+        assert_eq!(response.result(), &FunctionResult::Value(Value::Null));
+        assert_eq!(
+            serde_json::to_value(response).expect("response must serialize"),
+            expected
+        );
+    }
+
+    #[test]
+    fn renderer_function_requires_a_catalog_id() {
+        let error = CallRendererFunction::new("call-1", FunctionCall::new("render"))
+            .expect_err("call without a catalog must fail");
+        assert_eq!(error.code, FunctionError::INVALID_FUNCTION_CALL);
+        assert_eq!(
+            error.to_string(),
+            "INVALID_FUNCTION_CALL: callFunction.catalogId is required"
+        );
+
+        let input = json!({
+            "functionCallId": "call-1",
+            "callFunction": {"@call": "render"}
+        });
+        let _ = serde_json::from_value::<CallRendererFunction>(input)
+            .expect_err("a missing catalog ID must fail");
+    }
+
+    #[test]
+    fn renderer_function_has_exact_json_and_round_trips() {
+        let expected = json!({
+            "surfaceId": "booking",
+            "functionCallId": "call-1",
+            "callFunction": {
+                "@call": "render",
+                "catalogId": "travel:ui",
+                "args": {"visible": true}
+            }
+        });
+        let call = CallRendererFunction::new(
+            "call-1",
+            FunctionCall::new("render")
+                .catalog_id("travel:ui")
+                .arg("visible", true),
+        )
+        .expect("valid call must construct")
+        .surface_id("booking");
+
+        assert_eq!(call.surface_id_ref(), Some("booking"));
+        assert_eq!(call.function_call_id(), "call-1");
+        assert_eq!(
+            call.call_function().catalog_id.as_deref(),
+            Some("travel:ui")
+        );
+        assert_eq!(
+            serde_json::to_value(&call).expect("call must serialize"),
+            expected
+        );
+        let decoded: CallRendererFunction =
+            serde_json::from_value(expected.clone()).expect("call must deserialize");
+        assert_eq!(decoded, call);
+        assert_eq!(
+            serde_json::to_value(call.into_message()).expect("message must serialize"),
+            json!({"version": "1.0", "callRendererFunction": expected})
+        );
+    }
+
+    #[test]
+    fn renderer_function_rejects_unknown_fields() {
+        let input = json!({
+            "functionCallId": "call-1",
+            "callFunction": {"@call": "render", "catalogId": "travel:ui"},
+            "unknown": true
+        });
+        let _ = serde_json::from_value::<CallRendererFunction>(input)
+            .expect_err("unknown renderer-call fields must fail");
+    }
+
+    #[test]
+    fn agent_function_requires_a_catalog_id() {
+        let error = CallAgentFunction::new("booking", "call-1", FunctionCall::new("submit"))
+            .expect_err("call without a catalog must fail");
+        assert_eq!(error.code, FunctionError::INVALID_FUNCTION_CALL);
+
+        let input = json!({
+            "surfaceId": "booking",
+            "functionCallId": "call-1",
+            "callFunction": {"@call": "submit"}
+        });
+        let _ = serde_json::from_value::<CallAgentFunction>(input)
+            .expect_err("a missing catalog ID must fail");
+    }
+
+    #[test]
+    fn agent_function_has_exact_json_and_round_trips() {
+        let expected = json!({
+            "surfaceId": "booking",
+            "functionCallId": "call-1",
+            "callFunction": {
+                "@call": "submit",
+                "catalogId": "travel:actions",
+                "args": {"bookingId": "b-1"}
+            }
+        });
+        let call = CallAgentFunction::new(
+            "booking",
+            "call-1",
+            FunctionCall::new("submit")
+                .catalog_id("travel:actions")
+                .arg("bookingId", "b-1"),
+        )
+        .expect("valid call must construct");
+
+        assert_eq!(call.surface_id(), "booking");
+        assert_eq!(call.function_call_id(), "call-1");
+        assert_eq!(
+            call.call_function().catalog_id.as_deref(),
+            Some("travel:actions")
+        );
+        assert_eq!(
+            serde_json::to_value(&call).expect("call must serialize"),
+            expected
+        );
+        let decoded: CallAgentFunction =
+            serde_json::from_value(expected.clone()).expect("call must deserialize");
+        assert_eq!(decoded, call);
+        let message = RendererToAgentMessage::CallAgentFunction(CallAgentFunctionMessage {
+            version: ProtocolVersion::V1_0,
+            call_agent_function: decoded,
+        });
+        assert_eq!(
+            serde_json::to_value(message).expect("message must serialize"),
+            json!({"version": "1.0", "callAgentFunction": expected})
+        );
+    }
+
+    #[test]
+    fn agent_function_rejects_unknown_fields() {
+        let input = json!({
+            "surfaceId": "booking",
+            "functionCallId": "call-1",
+            "callFunction": {"@call": "submit", "catalogId": "travel:actions"},
+            "unknown": true
+        });
+        let _ = serde_json::from_value::<CallAgentFunction>(input)
+            .expect_err("unknown agent-call fields must fail");
+    }
+
+    #[test]
+    fn function_envelopes_reject_unknown_fields() {
+        let agent_messages = [
+            json!({
+                "version": "1.0",
+                "agentFunctionResponse": {"functionCallId": "call-1", "value": null},
+                "unknown": true
+            }),
+            json!({
+                "version": "1.0",
+                "callRendererFunction": {
+                    "functionCallId": "call-1",
+                    "callFunction": {"@call": "render", "catalogId": "test:functions"}
+                },
+                "unknown": true
+            }),
+        ];
+        for input in agent_messages {
+            let _ = serde_json::from_value::<AgentToRendererMessage>(input)
+                .expect_err("unknown agent-envelope fields must fail");
+        }
+
+        let renderer_messages = [
+            json!({
+                "version": "1.0",
+                "rendererFunctionResponse": {"functionCallId": "call-1", "value": null},
+                "unknown": true
+            }),
+            json!({
+                "version": "1.0",
+                "callAgentFunction": {
+                    "surfaceId": "main",
+                    "functionCallId": "call-1",
+                    "callFunction": {"@call": "submit", "catalogId": "test:functions"}
+                },
+                "unknown": true
+            }),
+        ];
+        for input in renderer_messages {
+            let _ = serde_json::from_value::<RendererToAgentMessage>(input)
+                .expect_err("unknown renderer-envelope fields must fail");
+        }
     }
 }

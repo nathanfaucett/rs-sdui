@@ -167,11 +167,11 @@ importers:
   .:
     dependencies:
       '@a2ui/lit':
-        specifier: 0.15.0
-        version: 0.15.0(signal-polyfill@0.2.3)
+        specifier: 0.16.0
+        version: 0.16.0(signal-polyfill@0.2.3)
       '@a2ui/web_core':
-        specifier: 0.15.0
-        version: 0.15.0
+        specifier: 0.16.1
+        version: 0.16.1
     devDependencies:
       '@biomejs/biome':
         specifier: 2.5.6
@@ -191,16 +191,16 @@ importers:
 
 packages:
 
-  '@a2ui/lit@0.15.0':
-    resolution: {integrity: sha512-JKLdpj9zOzJepJlx2rD2fuHeWNZ7PevWJ+0ENNXzZcI/KT9SsKXNDt3Z8N/89XqepHdfaug/yDIOcaJnNJl7og==}
+  '@a2ui/lit@0.16.0':
+    resolution: {integrity: sha512-TUGWxtyp+NYOnzhABPFrXgiZ4ufaVPcfmdFWgipFjY/5/70VdwWfyBGGy1SEfpo0nbNGguaNCpNBcZ1VZxrwqg==}
     peerDependencies:
-      '@a2ui/markdown-it': ^0.2.2
+      '@a2ui/markdown-it': ^0.2.3
     peerDependenciesMeta:
       '@a2ui/markdown-it':
         optional: true
 
-  '@a2ui/web_core@0.15.0':
-    resolution: {integrity: sha512-S3k9rAJ9O55z5TlDeWy22ly3yQnDLO+XBWihlL5JQSuyxaCUmd7jgFnxO4eq/Bn6dSgdBF0WG8cve/euMoz8SA==}
+  '@a2ui/web_core@0.16.1':
+    resolution: {integrity: sha512-sdQ8q4RNAaKla18AAXIGdAvfbzpE8+qay2vXMSPmgnBVUMZmi7ZwguzVsoCeRQSzvyAgNMjde/CcclARv7SzQw==}
 
   '@biomejs/biome@2.5.6':
     resolution: {integrity: sha512-lxVNjv7UF6KfhMJfL9gaUHbWdJdHbsAj6OSmwSYNdhRuG67NxNQ4Xdvh3TUxsSK9sBzJBQhEJj3AopmmNJ5pSA==}
@@ -424,11 +424,6 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  jsesc@3.1.0:
-    resolution: {integrity: sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA==}
-    engines: {node: '>=6'}
-    hasBin: true
-
   lightningcss-android-arm64@1.33.0:
     resolution: {integrity: sha512-gEpRTalKdosp4Bb8qWtc2iOgE5SeIHlpS1up9bFq2wAyYhl1UdTObYiHe98zEM9SQvSoqQZ1IQD0JNpg3Ml5pg==}
     engines: {node: '>= 12.0.0'}
@@ -534,15 +529,6 @@ packages:
     resolution: {integrity: sha512-RVHEU9/Pp1Fnjr/MpAJsZoADukCKhfIi15OunEYiGktIkYLkPVvC1sioWolGDS7XByMTx9m/IGbro0Js13zhnQ==}
     engines: {node: ^10 || ^12 || >=14}
 
-  redos-detector@6.1.4:
-    resolution: {integrity: sha512-lPlka1rEH6kK42gtgokvvxMmpAvyc28DcRjQbGxeP5RJsJWgAduBOdGedVCDPdSyCr4ay/JDxq3nGYsJZyt8tA==}
-    engines: {node: '>=16.0.0'}
-    hasBin: true
-
-  regjsparser@0.13.0:
-    resolution: {integrity: sha512-NZQZdC5wOE/H3UT28fVGL+ikOZcEzfMGk/c3iN9UGxzWHMa1op7274oyiUVrAG4B2EuFhus8SvkaYnhvW92p9Q==}
-    hasBin: true
-
   rolldown@1.2.19:
     resolution: {integrity: sha512-QIiV1J9d0pzN4jeeTH4sjPy0AZ6cAy2cG0ExeoE1+U8Rvj+hR3gYkokx0YbeUNGlZqiQJJ2utcETe0oKXwzsuA==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -631,9 +617,9 @@ packages:
 
 snapshots:
 
-  '@a2ui/lit@0.15.0(signal-polyfill@0.2.3)':
+  '@a2ui/lit@0.16.0(signal-polyfill@0.2.3)':
     dependencies:
-      '@a2ui/web_core': 0.15.0
+      '@a2ui/web_core': 0.16.1
       '@lit-labs/signals': 0.3.0
       '@lit/context': 1.1.6
       lit: 3.3.3
@@ -642,12 +628,11 @@ snapshots:
     transitivePeerDependencies:
       - signal-polyfill
 
-  '@a2ui/web_core@0.15.0':
+  '@a2ui/web_core@0.16.1':
     dependencies:
       '@lit/context': 1.1.6
       '@preact/signals-core': 1.14.5
       lit: 3.3.3
-      redos-detector: 6.1.4
       validate-color: 2.2.4
       zod: 3.25.76
       zod-to-json-schema: 3.25.2(zod@3.25.76)
@@ -803,8 +788,6 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  jsesc@3.1.0: {}
-
   lightningcss-android-arm64@1.33.0:
     optional: true
 
@@ -883,14 +866,6 @@ snapshots:
       nanoid: 3.3.20
       picocolors: 1.1.1
       source-map-js: 1.2.4
-
-  redos-detector@6.1.4:
-    dependencies:
-      regjsparser: 0.13.0
-
-  regjsparser@0.13.0:
-    dependencies:
-      jsesc: 3.1.0
 
   rolldown@1.2.19:
     dependencies:

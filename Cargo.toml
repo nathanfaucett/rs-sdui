@@ -16,8 +16,12 @@ a2ui-author = { path = "crates/a2ui-author" }
 a2ui-basic = { path = "crates/a2ui-basic" }
 a2ui-codegen = { path = "crates/a2ui-codegen" }
 a2ui-derive = { path = "crates/a2ui-derive" }
+a2ui-function = { path = "crates/a2ui-function" }
 a2ui-view = { path = "crates/a2ui-view" }
 futures = { version = "0.3", default-features = false, features = ["executor"] }
+futures-timer = "3"
+js-sys = "0.3"
+jsonschema = { version = "=0.63.1", default-features = false }
 prettyplease = "0.2"
 proc-macro2 = "1"
 quote = "1"

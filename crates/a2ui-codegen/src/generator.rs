@@ -427,8 +427,14 @@ fn render_enum(name: &Ident, values: &[String]) -> Result<TokenStream, Box<dyn E
     })
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "function builder assembly stays in one module"
+)]
 fn render_function(name: &str, schema: &Value) -> Result<TokenStream, Box<dyn Error>> {
     let function_name = value_ident(name)?;
+    let builder = type_ident(&format!("{name}Function"))?;
+    let property_prefix = type_ident(name)?;
     let docs = doc_attributes(schema.get("description").and_then(Value::as_str));
     let empty = serde_json::Map::new();
     let args = schema
@@ -452,16 +458,18 @@ fn render_function(name: &str, schema: &Value) -> Result<TokenStream, Box<dyn Er
         .collect::<Vec<_>>();
 
     let mut inputs = Vec::new();
+    let mut optional = Vec::new();
     let mut definitions = Vec::new();
-    let builder = type_ident(name)?;
     for (argument_name, argument_schema) in &properties {
+        let property = render_property(&property_prefix, argument_name, argument_schema)?;
+        definitions.push(property.definition.clone());
         if required
             .iter()
             .any(|required_name| required_name == argument_name)
         {
-            let property = render_property(&builder, argument_name, argument_schema)?;
-            definitions.push(property.definition.clone());
             inputs.push(property);
+        } else {
+            optional.push(property);
         }
     }
     let parameters = inputs.iter().map(|property| {
@@ -475,16 +483,97 @@ fn render_function(name: &str, schema: &Value) -> Result<TokenStream, Box<dyn Er
         let value = input_value(&property.kind, rust_name);
         quote!(.arg(#wire_name, #value))
     });
+    let optional_setters = optional.iter().map(|property| {
+        let wire_name = &property.wire_name;
+        let rust_name = &property.rust_name;
+        let input = input_type(&property.kind);
+        let value = input_value(&property.kind, rust_name);
+        let docs = &property.docs;
+        quote! {
+            #docs
+            pub fn #rust_name(mut self, #rust_name: #input) -> Self {
+                self.0 = self.0.arg(#wire_name, #value);
+                self
+            }
+        }
+    });
+
+    let agent_only = schema.get("allowedCallers").and_then(Value::as_str) == Some("agentOnly");
+    let requires_user_activation = schema
+        .get("requiresUserActivation")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let dynamic_types = match schema.get("returnType").and_then(Value::as_str) {
+        Some("string") => vec![
+            quote!(::a2ui_author::DynamicString),
+            quote!(::a2ui_author::DynamicValue),
+        ],
+        Some("number") => vec![
+            quote!(::a2ui_author::DynamicNumber),
+            quote!(::a2ui_author::DynamicValue),
+        ],
+        Some("boolean" | "validationResult") => vec![
+            quote!(::a2ui_author::DynamicBoolean),
+            quote!(::a2ui_author::DynamicValue),
+            quote!(::a2ui_author::Condition),
+        ],
+        Some("array" | "object" | "any") => vec![quote!(::a2ui_author::DynamicValue)],
+        _ => Vec::new(),
+    };
+    let dynamic_conversions = if agent_only || requires_user_activation {
+        Vec::new()
+    } else {
+        dynamic_types
+            .iter()
+            .map(|target| {
+                quote! {
+                    impl From<#builder> for #target {
+                        fn from(value: #builder) -> Self {
+                            ::a2ui_author::FunctionCall::from(value).into()
+                        }
+                    }
+                }
+            })
+            .collect()
+    };
+    let view_action_conversion = (!agent_only).then(|| {
+        quote! {
+            impl From<#builder> for ::a2ui_view::ViewAction {
+                fn from(value: #builder) -> Self {
+                    ::a2ui_author::FunctionCall::from(value).into()
+                }
+            }
+        }
+    });
 
     Ok(quote! {
         #(#definitions)*
         #docs
+        #[derive(Debug)]
         #[must_use]
-        pub fn #function_name(#(#parameters),*) -> ::a2ui_author::FunctionCall {
-            ::a2ui_author::FunctionCall::new(#name)
-                .catalog_id(super::CATALOG_ID)
-                #(#setters)*
+        pub struct #builder(::a2ui_author::FunctionCall);
+
+        impl #builder {
+            #(#optional_setters)*
         }
+
+        #docs
+        pub fn #function_name(#(#parameters),*) -> #builder {
+            #builder(
+                ::a2ui_author::FunctionCall::new(#name)
+                    .catalog_id(super::CATALOG_ID)
+                    #(#setters)*
+            )
+        }
+
+        impl From<#builder> for ::a2ui_author::FunctionCall {
+            fn from(value: #builder) -> Self {
+                value.0
+            }
+        }
+
+        #(#dynamic_conversions)*
+        #view_action_conversion
     })
 }
 

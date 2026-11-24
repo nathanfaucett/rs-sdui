@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/a2ui/test-catalog.json",
+  "protocolVersion": "1.0",
+  "catalogId": "test:functions",
+  "functions": {
+    "agentTool": {
+      "type": "object",
+      "returnType": "string",
+      "allowedCallers": "agentOnly",
+      "properties": {
+        "@call": { "const": "agentTool" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "value": { "type": "string" }
+          },
+          "required": ["value"],
+          "unevaluatedProperties": false
+        }
+      },
+      "required": ["@call", "args"]
+    },
+    "shared": {
+      "type": "object",
+      "returnType": "string",
+      "allowedCallers": "rendererOrAgent",
+      "properties": {
+        "@call": { "const": "shared" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "value": { "type": "string" }
+          },
+          "required": ["value"],
+          "unevaluatedProperties": false
+        }
+      },
+      "required": ["@call", "args"]
+    },
+    "localOnly": {
+      "type": "object",
+      "returnType": "string",
+      "properties": {
+        "@call": { "const": "localOnly" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "value": { "type": "string" }
+          },
+          "required": ["value"],
+          "unevaluatedProperties": false
+        }
+      },
+      "required": ["@call", "args"]
+    },
+    "add": {
+      "type": "object",
+      "returnType": "number",
+      "allowedCallers": "rendererOrAgent",
+      "properties": {
+        "@call": { "const": "add" },
+        "args": {
+          "type": "object",
+          "properties": {
+            "left": { "type": "number" },
+            "right": { "type": "number" }
+          },
+          "required": ["left", "right"],
+          "unevaluatedProperties": false
+        }
+      },
+      "required": ["@call", "args"]
+    }
+  },
+  "$defs": {
+    "anyFunction": {
+      "oneOf": [
+        { "$ref": "#/functions/agentTool" },
+        { "$ref": "#/functions/shared" },
+        { "$ref": "#/functions/localOnly" },
+        { "$ref": "#/functions/add" }
+      ]
+    }
+  }
+}

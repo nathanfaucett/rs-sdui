@@ -29,7 +29,7 @@ impl From<DataBinding> for Value {
 
 /// A standard A2UI function call.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct FunctionCall {
     #[serde(rename = "@call")]
     pub name: String,
@@ -349,4 +349,37 @@ impl From<Action> for Value {
 
 fn to_value(value: impl Serialize) -> Value {
     serde_json::to_value(value).expect("A2UI authoring values must be JSON serializable")
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn dynamic_function_call_does_not_require_a_catalog_id() {
+        let expected = json!({
+            "@call": "formatDate",
+            "args": {"value": "2026-11-23"}
+        });
+        let dynamic: DynamicString =
+            serde_json::from_value(expected.clone()).expect("dynamic call must deserialize");
+
+        assert_eq!(
+            dynamic,
+            DynamicString::Call(FunctionCall::new("formatDate").arg("value", "2026-11-23"))
+        );
+        assert_eq!(
+            serde_json::to_value(dynamic).expect("dynamic call must serialize"),
+            expected
+        );
+    }
+
+    #[test]
+    fn function_call_rejects_unknown_fields() {
+        let input = json!({"@call": "formatDate", "unknown": true});
+        let _ = serde_json::from_value::<FunctionCall>(input)
+            .expect_err("unknown function-call fields must fail");
+    }
 }

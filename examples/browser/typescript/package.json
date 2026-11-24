@@ -13,11 +13,11 @@
     "precheck": "pnpm run build:wasm",
     "check": "tsc --noEmit && biome check .",
     "format": "biome format --write .",
-    "test": "node test.mjs"
+    "test": "node test.mjs && node stream.test.mjs"
   },
   "dependencies": {
-    "@a2ui/lit": "0.15.0",
-    "@a2ui/web_core": "0.15.0"
+    "@a2ui/lit": "0.16.0",
+    "@a2ui/web_core": "0.16.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.6",

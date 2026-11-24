@@ -1,4 +1,6 @@
 use a2ui_view::BoxError;
+#[cfg(not(target_arch = "wasm32"))]
+use futures::future::ready;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -11,7 +13,7 @@ pub struct LoadedTodo {
 pub fn load_examples() -> impl Future<Output = Result<Vec<LoadedTodo>, BoxError>> + Send {
     let result = serde_json::from_str(include_str!("../../typescript/public/todos.json"))
         .map_err(Into::into);
-    futures::future::ready(result)
+    ready(result)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -19,8 +21,15 @@ pub async fn load_examples() -> Result<Vec<LoadedTodo>, BoxError> {
     use wasm_bindgen::JsCast;
     use wasm_bindgen_futures::JsFuture;
 
-    let window = web_sys::window().ok_or("the browser window is unavailable")?;
-    let response = JsFuture::from(window.fetch_with_str("/todos.json"))
+    let request = if let Some(window) = web_sys::window() {
+        window.fetch_with_str("/todos.json")
+    } else {
+        let worker = js_sys::global()
+            .dyn_into::<web_sys::WorkerGlobalScope>()
+            .map_err(|_| "neither a browser window nor worker scope is available")?;
+        worker.fetch_with_str("/todos.json")
+    };
+    let response = JsFuture::from(request)
         .await
         .map_err(|error| format!("failed to fetch example tasks: {error:?}"))?;
     let response: web_sys::Response = response

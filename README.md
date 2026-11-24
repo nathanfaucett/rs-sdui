@@ -4,7 +4,7 @@ State-driven Rust authoring for the [official A2UI v1.0 specification](https://a
 
 Write owned Rust state, explicit transitions, and fluent catalog views. Run the same application on a server, in WASM, or on another Rust target. The output is always standard A2UI JSON. Transport and rendering stay outside the library.
 
-This workspace is not an A2UI Core SDK, Agent SDK, or renderer. Official A2UI SDKs perform renderer-side validation, expression evaluation, local input state, function execution, and rendering.
+This workspace is not a full A2UI Core SDK, Agent SDK, or renderer. Official A2UI SDKs perform renderer-side expression evaluation, local input state, function execution, and rendering. The workspace provides offline function-schema validation and bidirectional function RPC, but no inference compiler.
 
 ## Crates
 
@@ -14,6 +14,7 @@ This workspace is not an A2UI Core SDK, Agent SDK, or renderer. Official A2UI SD
 | `a2ui-author`      | Transport-independent A2UI v1.0 messages, components, bindings, actions, and function calls.                                           |
 | `a2ui-codegen`     | `build.rs` generation of typed component builders and function helpers from catalog JSON Schema files.                                 |
 | `a2ui-derive`      | Implementation of the `A2uiPath` derive exported by `a2ui-author`.                                                                     |
+| `a2ui-function`    | Offline catalog function validation, typed agent handlers, renderer-call correlation, timeouts, cancellation, and message dispatch.    |
 | `a2ui-view`        | Declarative element trees, child composition, typed event callbacks, and async effects.                                                |
 | `a2ui-basic`       | Generated helpers for the official v1.0 Basic Catalog. Its catalog file is copied verbatim from `a2ui-project/a2ui`.                   |
 | `examples/browser` | A complete local Rust/WASM application with Vite, TypeScript, and the official `@a2ui/web_core` and `@a2ui/lit` packages.              |
@@ -80,24 +81,28 @@ Component functions can return a concrete generated type, `impl Into<Element>`, 
 
 `Event::context` keeps standard A2UI expressions and data bindings in the JSON. The official renderer evaluates them before sending the action. `.on(...)` attaches a pure Rust transition from the current state and action to the next state. Neither the callback nor any custom action metadata is serialized.
 
-Use `.on_effect(...)` for I/O and other side effects. The effect also returns the next state, so ordinary errors work with `?`:
+Handlers are scoped by the standard `surfaceId`, `sourceComponentId`, and event name. Different components can reuse the same event name; the runtime does not rewrite or manually namespace it. An action with the right name but the wrong source component is rejected. For list actions, put a stable item ID in `Event::context` instead of encoding it in the event name. This keeps stale actions from affecting another row after the list changes.
+
+Use `.on_effect(...)` to declare an event that performs I/O and returns the next state. The workspace does not provide an HTTP client or a `Client` type; those belong to the application. This is the browser example's actual effect:
 
 ```rust,ignore
-fn load_button(client: Arc<Client>) -> impl Into<Element> {
+fn load_examples_button() -> Button {
     Button::new(
-        Text::new("Load"),
-        Event::new("load").on_effect(move |_state, _action| {
-            let client = client.clone();
+        Text::new("Load example tasks"),
+        Event::new("load_examples").on_effect(|state: &TodoApp, _| {
+            let state = state.clone();
             Effect::new(async move {
-                let value = client.load().await?;
-                Ok(Counter { value })
+                let examples = load_examples().await?;
+                state.with_loaded(examples)
             })
         }),
     )
 }
 ```
 
-The effect callback receives the current state and action. Native effects are `Send`; WASM effects are local. `handle()` drives the future but does not spawn it. Choose Tokio, another executor, a local WASM task, or direct `.await` in the application.
+`load_examples()` uses browser `fetch` on WASM and reads the same bundled JSON on native targets. `with_loaded()` validates the result and returns the next `TodoApp`. See the complete implementations in `examples/browser/rust/src/load.rs` and `examples/browser/rust/src/ui.rs`; this path is covered by native tests and browser validation. An application with a shared API client can capture its `Arc` in the same way, but the library does not prescribe that dependency.
+
+The callback and future are Rust-only. A2UI JSON contains the standard event, not the I/O operation. `handle()` awaits the effect, validates the next state and view, then commits both. Native effects are `Send`; WASM effects are local. `handle()` does not spawn work or select an executor. Choose Tokio, another executor, a local WASM task, or direct `.await` in the application.
 
 ### Complete JSON tree
 
@@ -165,6 +170,7 @@ Serialize each returned `AgentToRendererMessage` in order. Send it through a loc
 ### Emission and state rules
 
 - `start()` validates the declarative view and emits one complete `createSurface`. Serialize it directly to a file, stream, or transport.
+- `snapshot()` clones the current surface into one complete `createSurface` for a newly connected renderer. It does not rerun the view or change lifecycle state.
 - `handle()` runs a named action. An action error, state-serialization error, or invalid next view rolls back Rust state. External side effects cannot roll back.
 - Changed state emits path-scoped `updateDataModel` messages. Arrays and scalar values update at their exact paths.
 - Removing an object key replaces the smallest parent object because A2UI has no key-deletion message. Other changes do not send the root model.
@@ -178,7 +184,51 @@ Serialize each returned `AgentToRendererMessage` in order. Send it through a loc
 
 One `Application` owns one fixed surface ID and catalog. Use separate instances with unique surface IDs for multiple surfaces. Capture clients and other external resources in action/effect callbacks instead of storing them in cloned UI state.
 
-The action loop does not interpret `callAgentFunction`, `rendererFunctionResponse`, or renderer errors. Applications that need those flows can use the standard types in `a2ui-author` directly. `a2ui-app` does not evaluate expressions or execute functions.
+`Application::handle` intentionally accepts only standard `action` envelopes. Use `a2ui-function::RendererMessageProcessor` for function RPC. Its `Dispatch::Unhandled` variant returns ordinary actions and errors to the application or agent loop. `a2ui-app` does not evaluate expressions.
+
+## Catalog functions
+
+Generated function builders have typed required arguments, typed fluent optional arguments, and conversions based on `returnType`, `allowedCallers`, and `requiresUserActivation`:
+
+```rust
+use a2ui_author::CheckRule;
+use a2ui_basic::v1::{self, Button, Text};
+
+let price = Text::new(
+    v1::functions::format_currency("USD", Booking::paths().price())
+        .decimals(2)
+        .grouping(true),
+);
+let required = CheckRule::new(v1::functions::required(Booking::paths().price()));
+let help = Button::new(
+    Text::new("Documentation"),
+    v1::functions::open_url("https://a2ui.org/"),
+);
+```
+
+Use renderer functions for formatting, checks, and local actions. Use `Event` transitions for authoritative application state. Use agent functions for discrete backend operations without an LLM turn.
+
+`a2ui-function` validates complete function calls offline against the official common schema and each catalog. `AgentFunctions::register` deserializes resolved arguments into a Rust type and validates the return JSON. `RendererFunctionCalls` correlates `functionCallId`, validates results, and supports optional timeouts, explicit cancellation, surface cancellation, and disposal. No executor or transport is selected.
+
+```rust,ignore
+let catalogs = a2ui_function::CatalogSet::from_json(catalog_json)?;
+let mut processor = a2ui_function::RendererMessageProcessor::new(catalogs);
+processor.agent_functions_mut().register(
+    catalog_id,
+    "checkInventory",
+    |args: InventoryArgs, context| async move {
+        check_inventory(args, context).await
+    },
+)?;
+
+match processor.process(renderer_message).await {
+    a2ui_function::Dispatch::Handled(messages) => send(messages),
+    a2ui_function::Dispatch::Unhandled(a2ui_author::RendererToAgentMessage::Action(action)) => {
+        send(app.handle(action).await?);
+    }
+    a2ui_function::Dispatch::Unhandled(message) => handle_other(message),
+}
+```
 
 ## Author a surface without the runtime
 
@@ -237,7 +287,7 @@ pub use generated::*;
 
 Each catalog gets its own module, `CATALOG_ID`, `surface()` constructor, typed nested component builders, and a `functions` module. Required properties are constructor arguments; optional properties are fluent methods. Child properties accept other generated or composed views. Multiple catalogs can be used on one surface with the standard `@catalogId` and `catalogId` fields.
 
-The generator supports A2UI v1.0 only. Complex schema shapes without a small safe Rust mapping accept `serde_json::Value`; the generator does not invent replacement semantics. Optional function arguments use the standard `FunctionCall::arg()` builder.
+The generator supports A2UI v1.0 only. Complex schema shapes without a small safe Rust mapping accept `serde_json::Value`; the generator does not invent replacement semantics. Required function arguments are constructor parameters and optional arguments are typed fluent methods. Generated conversions respect the declared return type, caller permissions, and user-activation requirements. Raw `FunctionCall` remains the low-level escape hatch.
 
 ## Browser example
 
@@ -247,21 +297,27 @@ pnpm install
 pnpm run dev
 ```
 
-The example implements a complete todo list: add, edit, complete/reopen, delete, filter, and clear completed tasks. The official Lit renderer sends standard actions to the local WASM application. Rust returns standard A2UI updates to the official `MessageProcessor`. The local call is the only transport used; replace the callback to use a remote transport.
+The todo page implements add, edit, complete/reopen, delete, filter, clear completed, and async example loading. It uses renderer `formatString`, `openUrl`, and `@checks` for reactive text, local navigation, and immediate whitespace-title validation. Rust still validates all submitted titles.
+
+The entire todo application runs once in a module SharedWorker. One page mounts Renderer A and Renderer B side by side through separate connections and official message processors. The worker serializes actions and effects, broadcasts ordered updates, and sends `snapshot()` to late clients. Changes in either renderer appear in both. The same adapter also works across tabs. Renderer-local edits remain local until an action, as A2UI specifies.
+
+`typescript/src/transport.ts` defines the small application-owned `Transport`/`Connection` seam and shared renderer host. Every connection exposes inbound messages as an `AsyncIterable` and accepts outbound renderer messages through `send()`. `SharedWorkerTransport` and `LocalStreamTransport` implement the same contract. The wire contains standard A2UI messages only. Replace an adapter to use WebSocket, SSE, HTTP, or another transport.
+
+A reconnection must use a fresh renderer mount and message processor. The new connection sends `Application::snapshot()` before new updates. The official processor rejects `createSurface` for an existing surface ID, so sending a snapshot into the old processor is invalid. A transport with durable sequence replay can replay missed updates instead; otherwise, a full snapshot is the recovery mechanism. Do not blindly replay outbound actions because their side effects can already have run.
+
+`stream.test.mjs` drives seven deterministic Direct JSON messages through `LocalStreamTransport` and its async message stream. The messages establish data and unresolved structure before delivering component batches. The test also resolves action context and validates small path updates with the official processor. No second HTML entry, LLM, or API key is needed.
 
 The `dev` and `preview` scripts use the named `a2ui-browser` portless route. Portless supplies a dynamic `PORT` to Vite and prints the local `.localhost` URL.
 
 Useful checks:
 
 ```sh
-pnpm test        # official MessageProcessor validates the complete native state loop
+pnpm test        # official schemas/processor validate the state loop and async message stream
 pnpm run check   # builds WASM and checks TypeScript and Biome
 pnpm run build   # production WASM + Vite build
 ```
 
-Official npm SDK `0.15.0` currently rejects the current schema's `@checks` field and uses older unprefixed component-envelope keys. The browser example avoids those fields. No compatibility transform is applied. Use a renderer and catalog that implement the same v1.0 schema revision.
-
-The optional `@a2ui/markdown-it 0.2.2` package declares `web_core ^0.14`, so it cannot be installed cleanly with SDK `0.15.0`. Plain text renders, but Markdown formatting is unavailable until the official packages align.
+The browser uses official `@a2ui/web_core 0.16.1` and `@a2ui/lit 0.16.0` with the matching official v1.0 Basic Catalog. No compatibility transform is applied. Keep the schema and SDK revisions aligned.
 
 ## Validation
 
@@ -272,4 +328,4 @@ cargo clippy --workspace --all-targets
 
 ## Scope
 
-These crates provide application state, authoring, and code generation. They do not provide catalog negotiation, a network transport, an async executor, renderer-side expression evaluation, inference compilation, or native rendering.
+These crates provide application state, authoring, code generation, offline function validation, and bidirectional function RPC. They do not provide catalog negotiation, a network transport, an async executor, renderer-side expression evaluation, inference compilation, or native rendering. Agent integration notes are in `docs/agent-integration.md`; function behavior is in `docs/actions-and-functions.md`.

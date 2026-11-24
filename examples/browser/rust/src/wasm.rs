@@ -22,6 +22,19 @@ pub fn initial_messages() -> Result<String, JsValue> {
     })
 }
 
+/// Returns the current surface as a JSON array for a newly connected renderer.
+#[wasm_bindgen]
+pub fn snapshot_messages() -> Result<String, JsValue> {
+    APPLICATION.with(|application| {
+        let message = application
+            .try_borrow()
+            .map_err(js_error)?
+            .snapshot()
+            .map_err(js_error)?;
+        serde_json::to_string(&[message]).map_err(js_error)
+    })
+}
+
 /// Applies one official renderer action and returns standard A2UI JSON updates.
 #[wasm_bindgen]
 pub async fn handle_action(input: &str) -> Result<String, JsValue> {

@@ -19,6 +19,7 @@ unicode-ident.workspace = true
 
 [dev-dependencies]
 a2ui-basic.workspace = true
+a2ui-function.workspace = true
 futures.workspace = true
 
 [lints]

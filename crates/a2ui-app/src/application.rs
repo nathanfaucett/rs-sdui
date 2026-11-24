@@ -19,7 +19,7 @@ type View<S> = Box<dyn Fn(&S) -> Element>;
 
 struct Current<S> {
     surface: CreateSurface,
-    handlers: BTreeMap<String, Handler<S>>,
+    handlers: BTreeMap<(String, String), Handler<S>>,
 }
 
 /// Owns serializable state and a pure declarative view for one A2UI surface.
@@ -94,7 +94,21 @@ impl<S: Serialize + 'static> Application<S> {
         Ok(vec![message])
     }
 
-    /// Runs one event handler declared in the current view and emits A2UI updates.
+    /// Returns a complete `createSurface` message for a newly connected renderer.
+    ///
+    /// This clones the stored surface without rerunning the view or changing lifecycle state.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the application is stopped or closed.
+    pub fn snapshot(&self) -> Result<AgentToRendererMessage, ApplicationError> {
+        let current = self.current.as_ref().ok_or(ApplicationError::NotStarted)?;
+        Ok(current.surface.clone().into_message())
+    }
+
+    /// Runs the handler matching the action's source component and event name.
+    ///
+    /// Surface and source scoping lets separate components reuse event names.
     ///
     /// The returned future drives synchronous updates and async side effects. It
     /// does not spawn work or select an executor. State changes are committed only
@@ -128,10 +142,13 @@ impl<S: Serialize + 'static> Application<S> {
         }
 
         let name = message.action.name.clone();
-        let handler = current_view
-            .handlers
-            .get(&name)
-            .ok_or_else(|| ApplicationError::InvalidAction(format!("unknown action {name:?}")))?;
+        let source_component_id = message.action.source_component_id.clone();
+        let key = (source_component_id.clone(), name.clone());
+        let handler = current_view.handlers.get(&key).ok_or_else(|| {
+            ApplicationError::InvalidAction(format!(
+                "unknown action {name:?} from component {source_component_id:?}"
+            ))
+        })?;
         let next_state = handler
             .run(state, message.action)
             .await
@@ -172,16 +189,17 @@ fn render_current<S: Serialize + 'static>(
         })?;
     let parts = view(state).into_parts();
     let mut handlers = BTreeMap::new();
-    for handler in parts.handlers {
+    for (source_component_id, handler) in parts.handlers {
         let (event, handler) = handler.into_handler::<S>().map_err(|event| {
             ApplicationError::InvalidView(format!(
                 "action {:?} has a handler for another state type",
                 event.name
             ))
         })?;
-        if handlers.insert(event.name.clone(), handler).is_some() {
+        let key = (source_component_id.clone(), event.name.clone());
+        if handlers.insert(key, handler).is_some() {
             return Err(ApplicationError::InvalidView(format!(
-                "action {:?} has duplicate handlers",
+                "action {:?} has duplicate handlers on component {source_component_id:?}",
                 event.name
             )));
         }

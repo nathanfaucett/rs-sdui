@@ -16,7 +16,11 @@ export function mountA2ui(
   target: HTMLElement,
   surfaceId: string,
   transport: Transport
-): { processor: MessageProcessor<LitComponentApi>; connection: Connection } {
+): {
+  processor: MessageProcessor<LitComponentApi>;
+  connection: Connection;
+  done: Promise<void>;
+} {
   const processor = new MessageProcessor<LitComponentApi>([basicCatalog], undefined, {
     unifiedOutbound: true,
     outboundListener: (message) => {
@@ -50,6 +54,6 @@ export function mountA2ui(
       console.error("A2UI transport stream error", error);
     }
   };
-  void consume();
-  return { processor, connection };
+  const done = consume();
+  return { processor, connection, done };
 }

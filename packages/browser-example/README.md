@@ -1,26 +1,39 @@
 # Browser example
 
-A complete todo application using one Rust/WASM application and two side-by-side official Lit renderers.
+A complete todo application with configurable Rust application instances and official Lit renderers.
 
-- `rust/`: the Cargo crate, declarative A2UI application, native JSON stream, and WASM adapter.
-- `src/`: the small Vite/TypeScript application, Lit renderer adapter, and worker entry.
-- `../web`: the renderer-independent `@rs-a2ui/web` transport and worker helpers.
+- `rust/`: the declarative application, native JSON stream, WebSocket session server, and WASM adapter.
+- `src/`: the Vite/TypeScript page, Lit renderer adapter, and worker entry.
+- `scripts/serve.ts`: starts the WebSocket server and Vite together.
+- `../web`: renderer-independent SharedWorker and WebSocket transports.
 
-## Shared state and transport
+## Instances and sessions
 
-`src/application-worker.ts` supplies the generated WASM module to `startApplicationWorker` from `@rs-a2ui/web/worker`. The helper initializes the application, serializes actions and async effects, broadcasts ordered standard messages, and sends `Application::snapshot()` to late connections.
+The page starts with two instances. **Add instance** creates another independent renderer and connection. Each instance selects:
 
-The single page mounts Renderer A and Renderer B side by side. Add, edit, complete, delete, filter, or clear tasks in either renderer; the other receives the same updates. Normal A2UI input edits remain renderer-local until an action sends their resolved context. The same worker also synchronizes separate tabs.
+- **WASM SharedWorker**: Rust executes in the browser.
+- **Rust WebSocket**: Rust executes in the native example server.
+- **Session ID**: defaults to `browser-example`.
 
-`@rs-a2ui/web` has no rendering dependency. This example owns `src/mount-a2ui.ts`, which connects its `AsyncIterable` transport to the official Lit `MessageProcessor` and `<a2ui-surface>`. Replace that adapter to use another rendering library without changing the Rust application or worker transport.
+Instances with the same backend and session ID share one application runtime and ordered updates. A different session ID creates independent state. Worker and WebSocket runtimes are separate even when their session IDs match. The default session therefore synchronizes the two initial worker instances immediately.
 
-Each renderer's **Go offline**/**Go online** toggle controls its own connection. Offline renderers keep their last UI and miss broadcasts. Going online creates a fresh `mountA2ui` and message processor before the new connection receives `Application::snapshot()`. The official processor rejects `createSurface` for an existing surface ID, so do not send a snapshot into the old processor. The other renderer keeps the worker alive during this test. Durable transports can replay missed sequence numbers instead; snapshot recovery is the default. Do not blindly replay outbound actions because their side effects can already have run.
+**Connect to session** applies backend or ID changes with a fresh renderer. **Remove** closes that instance's connection.
 
-If the application owner also stops, its in-memory state is gone; recovery then requires application-owned persistence. A full browser restart stops the local worker and starts a new todo application.
+## Message flow and recovery
+
+`src/application-worker.ts` supplies the generated WASM module to `startApplicationWorker`. The worker helper initializes one application per SharedWorker, serializes actions and async effects, broadcasts standard messages, and sends `Application::snapshot()` to late connections.
+
+`rust/src/server.rs` provides the same behavior for native WebSocket sessions. It stores one started `Application` per session ID, serializes actions through a session lock, and broadcasts ordered standard messages. The session ID is in `/ws?session=<id>`; no custom A2UI fields or envelopes are used.
+
+**Go offline** closes only that instance and preserves its stale UI. Changes made by other instances are missed. **Go online** creates a fresh message processor before receiving a full snapshot. Never apply a snapshot to the old processor because it rejects a duplicate `createSurface`. Do not blindly replay outbound actions because effects may already have run.
+
+Server sessions remain in memory until the server stops. SharedWorker state lasts for the worker lifetime. Durable persistence remains application-owned.
+
+`@rs-a2ui/web` has no rendering dependency. `src/mount-a2ui.ts` is the example-owned Lit adapter. Replace it to use another renderer without changing either Rust runtime.
 
 ## Todo behavior
 
-The page implements add, edit, complete/reopen, delete, filter, clear completed, and async example loading. The subtitle uses `formatString`; the documentation button uses `openUrl`. Draft and edit TextFields and their Add/Save buttons use `regex("\\S", path)` checks. Rust still validates and trims every submitted title.
+The application implements add, edit, complete/reopen, delete, filter, clear completed, and async example loading. The subtitle uses `formatString`; the documentation button uses `openUrl`. Draft and edit TextFields use `regex("\\S", path)` checks. Rust validates and trims every submitted title.
 
 ## Run
 
@@ -31,19 +44,30 @@ pnpm install
 pnpm run dev
 ```
 
-The command builds `@rs-a2ui/web`, builds `rust/` into `src/pkg/`, and starts the named `a2ui-browser` portless route. Portless supplies a dynamic `PORT` to Vite and prints the local `.localhost` URL.
+The command builds `@rs-a2ui/web` and WASM, reserves a dynamic internal WebSocket port, starts the Rust server, and starts the named `a2ui-browser` portless route. Vite proxies same-origin `/ws` connections to Rust. Portless supplies the dynamic Vite `PORT` and prints the local `.localhost` URL.
+
+Run only the native WebSocket server with:
+
+```sh
+pnpm --filter @rs-a2ui/browser-example run server
+```
+
+It listens on `127.0.0.1:8081` by default. Set `A2UI_WS_ADDR` to change the socket address.
+
+Run the native JSON state-loop example with:
+
+```sh
+cargo run -p a2ui-browser-example
+```
 
 ## Validate
 
 From the repository root:
 
 ```sh
-pnpm run check   # helper build, WASM, TypeScript, and Biome
-pnpm run build   # helper, WASM, and production Vite build
+cargo test -p a2ui-browser-example
+pnpm run check
+pnpm run build
 ```
 
-Run the native JSON stream with:
-
-```sh
-cargo run -p a2ui-browser-example
-```
+The Rust WebSocket integration test verifies shared updates, late-client snapshots, and independent session IDs.

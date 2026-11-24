@@ -6,10 +6,11 @@
   "scripts": {
     "build:wasm": "wasm-pack build --target web --out-dir ../src/pkg --out-name browser rust",
     "predev": "pnpm --filter @rs-a2ui/web build && pnpm run build:wasm",
-    "dev": "portless a2ui-browser vite dev",
+    "dev": "node scripts/serve.ts dev",
     "prebuild": "pnpm --filter @rs-a2ui/web build",
     "build": "pnpm run build:wasm && vite build",
-    "preview": "portless a2ui-browser vite preview",
+    "preview": "node scripts/serve.ts preview",
+    "server": "cargo run -p a2ui-browser-example --bin server",
     "precheck": "pnpm --filter @rs-a2ui/web build && pnpm run build:wasm",
     "check": "tsc --noEmit",
     "format": "biome format --write ."

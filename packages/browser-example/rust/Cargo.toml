@@ -8,6 +8,7 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish = false
+default-run = "a2ui-browser-example"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -32,7 +33,10 @@ web-sys = { workspace = true, features = [
 ] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+form_urlencoded.workspace = true
 futures.workspace = true
+tokio.workspace = true
+tokio-tungstenite.workspace = true
 
 [lints]
 workspace = true

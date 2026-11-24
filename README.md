@@ -174,7 +174,7 @@ Incrementing this counter emits only:
 
 No component update is needed because the existing text binding reads the new value.
 
-Serialize each returned `AgentToRendererMessage` in order. Send it through a local call, WebSocket, SSE, HTTP, or another application-owned transport. This workspace intentionally has no transport abstraction or transport dependency.
+Serialize each returned `AgentToRendererMessage` in order. Send it through a local call, WebSocket, SSE, HTTP, or another application-owned transport. The Rust application runtime has no transport dependency. `@rs-a2ui/web` provides browser transport adapters without selecting a renderer.
 
 ### Emission and state rules
 
@@ -307,15 +307,15 @@ pnpm run dev
 
 The todo page implements add, edit, complete/reopen, delete, filter, clear completed, and async example loading. It uses renderer `formatString`, `openUrl`, and `@checks` for reactive text, local navigation, and immediate whitespace-title validation. Rust still validates all submitted titles.
 
-The entire todo application runs once in a module SharedWorker. One page mounts Renderer A and Renderer B side by side through separate connections and official message processors. The worker serializes actions and effects, broadcasts ordered updates, and sends `snapshot()` to late clients. Changes in either renderer appear in both. The same adapter also works across tabs. Renderer-local edits remain local until an action, as A2UI specifies.
+The page starts with two configurable application instances. **Add instance** creates more. Each instance selects a WASM SharedWorker or the native Rust WebSocket server and a session ID. Instances with the same backend and session ID share one runtime; a different ID creates independent state. Both backends serialize actions and effects, broadcast ordered updates, and send `snapshot()` to late clients. Renderer-local edits remain local until an action, as A2UI specifies.
 
 WASM is necessary because the Rust application executes inside that browser worker. `a2ui-wasm` owns the reusable FFI; the example declares only `a2ui_wasm::export_application!(crate::application, crate::TodoApp)`. `@rs-a2ui/web` owns worker synchronization. A server-hosted Rust application does not need either browser binding.
 
-`packages/web` defines the renderer-independent `Transport`/`Connection` seam and SharedWorker lifecycle helpers. Every connection exposes inbound messages as an `AsyncIterable` and accepts outbound renderer messages through `send()`. `SharedWorkerTransport` and `LocalStreamTransport` implement the same contract. The wire contains standard A2UI messages only. Replace an adapter to use WebSocket, SSE, HTTP, or another transport. The example owns its Lit adapter in `packages/browser-example/src/mount-a2ui.ts`; other applications can use any rendering library.
+`packages/web` defines the renderer-independent `Transport`/`Connection` seam and SharedWorker lifecycle helpers. Every connection exposes inbound messages as an `AsyncIterable` and accepts outbound renderer messages through `send()`. `SharedWorkerTransport`, `WebSocketTransport`, and `LocalStreamTransport` implement the same contract. The wire contains standard A2UI messages only; session IDs belong in worker names and WebSocket URLs. The example owns its Lit adapter in `packages/browser-example/src/mount-a2ui.ts`; other applications can use any rendering library.
 
 A reconnection must use a fresh renderer mount and message processor. The new connection sends `Application::snapshot()` before new updates. The official processor rejects `createSurface` for an existing surface ID, so sending a snapshot into the old processor is invalid. Each renderer's **Go offline**/**Go online** toggle demonstrates missed updates and snapshot recovery while the other renderer keeps the worker alive. A transport with durable sequence replay can replay missed updates instead; otherwise, a full snapshot is the recovery mechanism. Do not blindly replay outbound actions because their side effects can already have run. If the application owner also stops, its in-memory state is gone; recovery then requires application-owned persistence.
 
-The `dev` and `preview` scripts use the named `a2ui-browser` portless route. Portless supplies a dynamic `PORT` to Vite and prints the local `.localhost` URL.
+The `dev` and `preview` scripts start the Rust WebSocket server on a dynamic internal port and use the named `a2ui-browser` portless route. Vite proxies same-origin `/ws` connections to Rust. Portless supplies a dynamic `PORT` to Vite and prints the local `.localhost` URL. The standalone server listens on `127.0.0.1:8081`; override it with `A2UI_WS_ADDR`.
 
 Useful checks:
 

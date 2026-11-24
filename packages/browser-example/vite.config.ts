@@ -1,7 +1,7 @@
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
-const { PORT } = process.env;
+const { A2UI_WS_ADDR, PORT } = process.env;
 
 function parseInteger(value: string | undefined, defaultValue: number): number {
   const parsed = Number.parseInt(value ?? "", 10);
@@ -9,6 +9,8 @@ function parseInteger(value: string | undefined, defaultValue: number): number {
 }
 
 const port = parseInteger(PORT, 8080);
+const websocketAddress = A2UI_WS_ADDR ?? "127.0.0.1:8081";
+const websocketProxy = { target: `ws://${websocketAddress}`, ws: true };
 
 export default defineConfig({
   root: ".",
@@ -26,10 +28,12 @@ export default defineConfig({
     host: "127.0.0.1",
     port,
     strictPort: true,
+    proxy: { "/ws": websocketProxy },
   },
   preview: {
     host: "127.0.0.1",
     port,
     strictPort: true,
+    proxy: { "/ws": websocketProxy },
   },
 });

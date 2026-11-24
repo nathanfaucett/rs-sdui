@@ -10,7 +10,7 @@ pub fn derive(input: TokenStream) -> Result<TokenStream> {
     if !input.generics.params.is_empty() || input.generics.where_clause.is_some() {
         return Err(syn::Error::new(
             input.generics.span(),
-            "A2uiPath does not support generic state",
+            "A2uiData does not support generic state",
         ));
     }
 
@@ -20,12 +20,12 @@ pub fn derive(input: TokenStream) -> Result<TokenStream> {
             Fields::Named(fields) => structure(&input.attrs, &input.vis, &input.ident, &fields),
             _ => Err(syn::Error::new(
                 input.ident.span(),
-                "A2uiPath requires a struct with named fields or an enum",
+                "A2uiData requires a struct with named fields or an enum",
             )),
         },
         Data::Union(_) => Err(syn::Error::new(
             input.ident.span(),
-            "A2uiPath cannot be derived for unions",
+            "A2uiData cannot be derived for unions",
         )),
     }
 }
@@ -33,7 +33,7 @@ pub fn derive(input: TokenStream) -> Result<TokenStream> {
 fn leaf(ident: &syn::Ident) -> TokenStream {
     quote! {
         #[automatically_derived]
-        impl ::a2ui_author::A2uiPath for #ident {
+        impl ::a2ui_author::A2uiData for #ident {
             type Path = ::a2ui_author::DataBinding;
 
             fn from_path(path: ::a2ui_author::StatePath) -> Self::Path {
@@ -74,8 +74,8 @@ fn structure(
             };
             Ok(Some(quote! {
                 #[must_use]
-                #field_vis fn #field_ident(&self) -> <#field_type as ::a2ui_author::A2uiPath>::Path {
-                    <#field_type as ::a2ui_author::A2uiPath>::from_path(#path)
+                #field_vis fn #field_ident(&self) -> <#field_type as ::a2ui_author::A2uiData>::Path {
+                    <#field_type as ::a2ui_author::A2uiData>::from_path(#path)
                 }
             }))
         })
@@ -88,7 +88,7 @@ fn structure(
         }
 
         #[automatically_derived]
-        impl ::a2ui_author::A2uiPath for #ident {
+        impl ::a2ui_author::A2uiData for #ident {
             type Path = #paths;
 
             fn from_path(path: ::a2ui_author::StatePath) -> Self::Path {
@@ -99,7 +99,7 @@ fn structure(
         impl #ident {
             #[must_use]
             #vis fn paths() -> #paths {
-                <Self as ::a2ui_author::A2uiPath>::from_path(::a2ui_author::StatePath::root())
+                <Self as ::a2ui_author::A2uiData>::from_path(::a2ui_author::StatePath::root())
             }
         }
 

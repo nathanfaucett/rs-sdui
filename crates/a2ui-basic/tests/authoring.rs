@@ -1,15 +1,15 @@
-use a2ui_author::{A2uiPath, CheckRule, DataModel, DynamicString, Event, FunctionCall};
+use a2ui_author::{A2uiData, CheckRule, DataModel, DynamicString, Event, FunctionCall};
 use a2ui_basic::v1::{self, Button, ButtonVariant, Column, Text};
 use a2ui_view::{Element, EventExt};
 use serde::Serialize;
 use serde_json::json;
 
-#[derive(A2uiPath, Serialize)]
+#[derive(A2uiData, Serialize)]
 struct Trip {
     name: String,
 }
 
-#[derive(A2uiPath, Serialize)]
+#[derive(A2uiData, Serialize)]
 struct Booking {
     trip: Trip,
     price: u32,

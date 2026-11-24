@@ -1,12 +1,12 @@
 use a2ui_app::Application;
-use a2ui_author::{A2uiPath, Event, RendererToAgentMessage};
+use a2ui_author::{A2uiData, Event, RendererToAgentMessage};
 use a2ui_basic::v1::{self, Button, Column, Text};
 use a2ui_function::{CatalogSet, Dispatch, RendererMessageProcessor};
 use a2ui_view::{Element, EventExt};
 use futures::executor::block_on;
 use serde::Serialize;
 
-#[derive(A2uiPath, Default, Serialize)]
+#[derive(A2uiData, Default, Serialize)]
 struct Counter {
     count: i32,
 }

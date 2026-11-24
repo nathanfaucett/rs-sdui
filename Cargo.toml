@@ -18,6 +18,7 @@ a2ui-codegen = { path = "crates/a2ui-codegen" }
 a2ui-derive = { path = "crates/a2ui-derive" }
 a2ui-function = { path = "crates/a2ui-function" }
 a2ui-view = { path = "crates/a2ui-view" }
+a2ui-wasm = { path = "crates/a2ui-wasm" }
 futures = { version = "0.3", default-features = false, features = ["executor"] }
 futures-timer = "3"
 js-sys = "0.3"

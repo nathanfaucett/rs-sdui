@@ -1,0 +1,21 @@
+[package]
+name = "a2ui-wasm"
+description = "wasm-bindgen lifecycle glue for local A2UI applications"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["a2ui", "wasm", "ui", "json"]
+categories = ["gui", "wasm"]
+
+[dependencies]
+a2ui-app.workspace = true
+a2ui-author.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+wasm-bindgen.workspace = true
+
+[lints]
+workspace = true

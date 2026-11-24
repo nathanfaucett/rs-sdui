@@ -2,7 +2,7 @@ use std::iter::once;
 
 use a2ui_app::{Application, ApplicationError};
 use a2ui_author::{
-    A2uiPath, ActionEvent, ActionMessage, AgentToRendererMessage, Event, ProtocolVersion,
+    A2uiData, ActionEvent, ActionMessage, AgentToRendererMessage, Event, ProtocolVersion,
 };
 use a2ui_basic::v1::{self, Button, Column, Text};
 use a2ui_view::{Effect, Element, EventExt};
@@ -13,7 +13,7 @@ use futures::{
 use serde::Serialize;
 use serde_json::{Map, json};
 
-#[derive(A2uiPath, Clone, Debug, Default, Serialize)]
+#[derive(A2uiData, Clone, Debug, Default, Serialize)]
 struct Counter {
     count: i32,
 }

@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
 const { PORT } = process.env;
@@ -12,6 +13,7 @@ const port = parseInteger(PORT, 8080);
 export default defineConfig({
   root: ".",
   publicDir: "public",
+  plugins: [tailwindcss()],
   build: {
     outDir: "dist",
     emptyOutDir: true,

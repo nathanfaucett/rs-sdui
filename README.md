@@ -13,9 +13,10 @@ This workspace is not a full A2UI Core SDK, Agent SDK, or renderer. Official A2U
 | `a2ui-app`      | Owned state machines, declarative view mounting, automatic state data models, action decoding, component diffs, and surface lifecycle. |
 | `a2ui-author`   | Transport-independent A2UI v1.0 messages, components, bindings, actions, and function calls.                                           |
 | `a2ui-codegen`  | `build.rs` generation of typed component builders and function helpers from catalog JSON Schema files.                                 |
-| `a2ui-derive`   | Implementation of the `A2uiPath` derive exported by `a2ui-author`.                                                                     |
+| `a2ui-derive`   | Implementation of the `A2uiData` derive exported by `a2ui-author`.                                                                     |
 | `a2ui-function` | Offline catalog function validation, typed agent handlers, renderer-call correlation, timeouts, cancellation, and message dispatch.    |
 | `a2ui-view`     | Declarative element trees, child composition, typed event callbacks, and async effects.                                                |
+| `a2ui-wasm`     | Reusable `wasm_bindgen` lifecycle exports for local browser applications.                                                              |
 | `a2ui-basic`    | Generated helpers for the official v1.0 Basic Catalog. Its catalog file is copied verbatim from `a2ui-project/a2ui`.                   |
 
 No third-party Rust A2UI implementation is used.
@@ -40,12 +41,12 @@ Standard events and their state transitions are declared together in the view. N
 
 ```rust
 use a2ui_app::Application;
-use a2ui_author::{A2uiPath, ActionMessage, DataBinding, Event};
+use a2ui_author::{A2uiData, ActionMessage, DataBinding, Event};
 use a2ui_basic::v1::{self, Button, Column, Text};
 use a2ui_view::{Element, EventExt};
 use serde::Serialize;
 
-#[derive(A2uiPath, Clone, Default, Serialize)]
+#[derive(A2uiData, Clone, Default, Serialize)]
 struct Counter {
     value: i64,
 }
@@ -81,7 +82,7 @@ let update_messages = app.handle(action).await?;
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-Derive `A2uiPath` on state, nested structs, and scalar enums. Structs provide `Type::paths()`; enums act as scalar fields. Generated bindings follow Serde names, and removed Rust fields fail at compile time. Collection fields use `.index(index)`. The derive follows Serde `rename`, `rename_all`, `flatten`, `skip`, and `skip_serializing`. It currently accepts named, non-generic structs and enums. Use typed paths for application state; reserve `DataBinding::new` for relative list-template bindings and wire-level protocol code.
+Derive `A2uiData` on state, nested structs, and scalar enums. Structs provide `Type::paths()`; enums act as scalar fields. Generated bindings follow Serde names, and removed Rust fields fail at compile time. Collection fields use `.index(index)`. The derive follows Serde `rename`, `rename_all`, `flatten`, `skip`, and `skip_serializing`. It currently accepts named, non-generic structs and enums. Use typed paths for application state; reserve `DataBinding::new` for relative list-template bindings and wire-level protocol code.
 
 The view is a pure description. The runtime generates all component IDs, flattens the tree into the standard A2UI list, creates the surface, and serializes state as its root data model. State must implement `Serialize` and produce a JSON object. Use `#[serde(skip)]` for clients or other non-data fields.
 
@@ -241,16 +242,16 @@ match processor.process(renderer_message).await {
 ## Author a surface without the runtime
 
 ```rust
-use a2ui_author::{A2uiPath, Event};
+use a2ui_author::{A2uiData, Event};
 use a2ui_basic::v1::{self, Button, Column, Text};
 use serde::Serialize;
 
-#[derive(A2uiPath, Serialize)]
+#[derive(A2uiData, Serialize)]
 struct Form {
     name: String,
 }
 
-#[derive(A2uiPath, Serialize)]
+#[derive(A2uiData, Serialize)]
 struct State {
     form: Form,
 }
@@ -307,6 +308,8 @@ pnpm run dev
 The todo page implements add, edit, complete/reopen, delete, filter, clear completed, and async example loading. It uses renderer `formatString`, `openUrl`, and `@checks` for reactive text, local navigation, and immediate whitespace-title validation. Rust still validates all submitted titles.
 
 The entire todo application runs once in a module SharedWorker. One page mounts Renderer A and Renderer B side by side through separate connections and official message processors. The worker serializes actions and effects, broadcasts ordered updates, and sends `snapshot()` to late clients. Changes in either renderer appear in both. The same adapter also works across tabs. Renderer-local edits remain local until an action, as A2UI specifies.
+
+WASM is necessary because the Rust application executes inside that browser worker. `a2ui-wasm` owns the reusable FFI; the example declares only `a2ui_wasm::export_application!(crate::application, crate::TodoApp)`. `@rs-a2ui/web` owns worker synchronization. A server-hosted Rust application does not need either browser binding.
 
 `packages/web` defines the renderer-independent `Transport`/`Connection` seam and SharedWorker lifecycle helpers. Every connection exposes inbound messages as an `AsyncIterable` and accepts outbound renderer messages through `send()`. `SharedWorkerTransport` and `LocalStreamTransport` implement the same contract. The wire contains standard A2UI messages only. Replace an adapter to use WebSocket, SSE, HTTP, or another transport. The example owns its Lit adapter in `packages/browser-example/src/mount-a2ui.ts`; other applications can use any rendering library.
 

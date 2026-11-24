@@ -8,7 +8,7 @@ use crate::DataBinding;
 ///
 /// Derive this trait together with `Serialize`. Struct derivations provide a
 /// `Type::paths()` entry point. Enum derivations act as scalar fields.
-pub trait A2uiPath {
+pub trait A2uiData {
     type Path;
 
     #[doc(hidden)]
@@ -50,14 +50,14 @@ pub struct CollectionPath<T> {
     marker: PhantomData<fn() -> T>,
 }
 
-impl<T: A2uiPath> CollectionPath<T> {
+impl<T: A2uiData> CollectionPath<T> {
     #[must_use]
     pub fn index(self, index: usize) -> T::Path {
         T::from_path(self.path.index(index))
     }
 }
 
-impl<T: A2uiPath> A2uiPath for Vec<T> {
+impl<T: A2uiData> A2uiData for Vec<T> {
     type Path = CollectionPath<T>;
 
     fn from_path(path: StatePath) -> Self::Path {
@@ -68,7 +68,7 @@ impl<T: A2uiPath> A2uiPath for Vec<T> {
     }
 }
 
-impl<T: A2uiPath, const N: usize> A2uiPath for [T; N] {
+impl<T: A2uiData, const N: usize> A2uiData for [T; N] {
     type Path = CollectionPath<T>;
 
     fn from_path(path: StatePath) -> Self::Path {
@@ -79,7 +79,7 @@ impl<T: A2uiPath, const N: usize> A2uiPath for [T; N] {
     }
 }
 
-impl<T: A2uiPath> A2uiPath for Option<T> {
+impl<T: A2uiData> A2uiData for Option<T> {
     type Path = T::Path;
 
     fn from_path(path: StatePath) -> Self::Path {
@@ -87,7 +87,7 @@ impl<T: A2uiPath> A2uiPath for Option<T> {
     }
 }
 
-impl<T: A2uiPath> A2uiPath for Box<T> {
+impl<T: A2uiData> A2uiData for Box<T> {
     type Path = T::Path;
 
     fn from_path(path: StatePath) -> Self::Path {
@@ -98,7 +98,7 @@ impl<T: A2uiPath> A2uiPath for Box<T> {
 macro_rules! scalar_paths {
     ($($type:ty),* $(,)?) => {
         $(
-            impl A2uiPath for $type {
+            impl A2uiData for $type {
                 type Path = DataBinding;
 
                 fn from_path(path: StatePath) -> Self::Path {

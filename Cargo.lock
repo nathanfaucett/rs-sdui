@@ -44,6 +44,7 @@ dependencies = [
  "a2ui-author",
  "a2ui-basic",
  "a2ui-view",
+ "a2ui-wasm",
  "futures",
  "js-sys",
  "serde",
@@ -91,6 +92,17 @@ version = "0.1.0"
 dependencies = [
  "a2ui-author",
  "serde_json",
+]
+
+[[package]]
+name = "a2ui-wasm"
+version = "0.1.0"
+dependencies = [
+ "a2ui-app",
+ "a2ui-author",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
 ]
 
 [[package]]

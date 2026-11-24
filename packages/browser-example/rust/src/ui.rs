@@ -1,5 +1,5 @@
 use a2ui_app::Application;
-use a2ui_author::{A2uiPath, ActionEvent, CheckRule, Event, RendererToAgentMessage};
+use a2ui_author::{A2uiData, ActionEvent, CheckRule, Event};
 use a2ui_basic::v1::{
     self, Button, ButtonVariant, Card, Column, Row, Text, TextField, TextVariant,
 };
@@ -7,11 +7,11 @@ use a2ui_view::{ActionResult, BoxError, Effect, Element, EventExt};
 
 use crate::load::{LoadedTodo, load_examples};
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{Value, json};
 
 pub const SURFACE_ID: &str = "main";
 
-#[derive(A2uiPath, Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+#[derive(A2uiData, Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 enum Filter {
     #[default]
@@ -30,14 +30,14 @@ impl Filter {
     }
 }
 
-#[derive(A2uiPath, Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(A2uiData, Clone, Debug, PartialEq, Eq, Serialize)]
 struct Todo {
     id: u64,
     title: String,
     completed: bool,
 }
 
-#[derive(A2uiPath, Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(A2uiData, Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TodoApp {
     draft: String,
@@ -276,27 +276,43 @@ fn todo_card(index: usize, todo: &Todo) -> Card {
         TextField::new(format!("Edit {}", todo.title), title_path.clone())
             .checks([title_rule.clone()]),
         Row::new((
-            Button::new(
-                Text::new(format!("Save {}", todo.title)),
-                Event::new("save")
-                    .context("id", Value::from(id))
-                    .context("title", title_path)
-                    .on(|state: &TodoApp, action| state.rename(&action)),
+            Element::from(
+                Button::new(
+                    Text::new("Save"),
+                    Event::new("save")
+                        .context("id", Value::from(id))
+                        .context("title", title_path)
+                        .on(|state: &TodoApp, action| state.rename(&action)),
+                )
+                .checks([title_rule]),
             )
-            .checks([title_rule]),
-            Button::new(
-                Text::new(format!("{toggle_label} {}", todo.title)),
+            .property(
+                "@accessibility",
+                json!({"label": format!("Save {}", todo.title)}),
+            ),
+            Element::from(Button::new(
+                Text::new(toggle_label),
                 Event::new("toggle")
                     .context("id", Value::from(id))
                     .on(|state: &TodoApp, action| state.toggle(&action)),
+            ))
+            .property(
+                "@accessibility",
+                json!({"label": format!("{toggle_label} {}", todo.title)}),
             ),
-            Button::new(
-                Text::new(format!("Delete {}", todo.title)),
-                Event::new("delete")
-                    .context("id", Value::from(id))
-                    .on(|state: &TodoApp, action| state.remove(&action)),
+            Element::from(
+                Button::new(
+                    Text::new("Delete"),
+                    Event::new("delete")
+                        .context("id", Value::from(id))
+                        .on(|state: &TodoApp, action| state.remove(&action)),
+                )
+                .variant(ButtonVariant::Borderless),
             )
-            .variant(ButtonVariant::Borderless),
+            .property(
+                "@accessibility",
+                json!({"label": format!("Delete {}", todo.title)}),
+            ),
         )),
     )))
 }
@@ -332,20 +348,6 @@ pub fn application() -> Application<TodoApp> {
         TodoApp::default(),
         TodoApp::view,
     )
-}
-
-/// Decodes a standard renderer-to-agent envelope and requires an action.
-///
-/// # Errors
-///
-/// Returns an error for invalid JSON, a non-v1.0 envelope, or a non-action message.
-pub fn decode_action(input: &str) -> Result<a2ui_author::ActionMessage, String> {
-    let message: RendererToAgentMessage =
-        serde_json::from_str(input).map_err(|error| format!("invalid A2UI JSON: {error}"))?;
-    match message {
-        RendererToAgentMessage::Action(action) => Ok(action),
-        _ => Err("the local example accepts standard A2UI action messages only".to_owned()),
-    }
 }
 
 #[cfg(test)]

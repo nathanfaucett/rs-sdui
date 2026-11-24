@@ -8,7 +8,7 @@ pub mod dynamic;
 pub mod message;
 pub mod state;
 
-pub use a2ui_derive::A2uiPath;
+pub use a2ui_derive::A2uiData;
 pub use component::*;
 pub use dynamic::*;
 pub use message::*;

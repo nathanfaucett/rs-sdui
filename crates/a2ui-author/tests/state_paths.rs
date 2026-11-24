@@ -1,24 +1,24 @@
-use a2ui_author::A2uiPath;
+use a2ui_author::A2uiData;
 use serde::Serialize;
 
-#[derive(A2uiPath, Serialize)]
+#[derive(A2uiData, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Nested {
     display_name: String,
 }
 
-#[derive(A2uiPath, Serialize)]
+#[derive(A2uiData, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Item {
     item_id: u64,
 }
 
-#[derive(A2uiPath, Serialize)]
+#[derive(A2uiData, Serialize)]
 enum Kind {
     Basic,
 }
 
-#[derive(A2uiPath, Serialize)]
+#[derive(A2uiData, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct State {
     simple_value: String,

@@ -63,20 +63,6 @@ export function createAgentMessageStream(): AgentMessageStream {
   };
 }
 
-function delay(milliseconds: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(resolve, milliseconds);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timeout);
-        reject(signal.reason);
-      },
-      { once: true }
-    );
-  });
-}
-
 export class LocalStreamTransport implements Transport {
   private activeStream: AbortController | undefined;
   private readonly handleAction: (message: ActionMessage) => AgentToRendererMessage[];
@@ -134,8 +120,9 @@ export class LocalStreamTransport implements Transport {
         this.surfaceCreated = false;
       }
 
-      for (const [index, message] of this.initialMessages.entries()) {
-        if (index > 0) await delay(300, currentStream.signal);
+      for (const message of this.initialMessages) {
+        // Yield without timing so closing or replaying can cancel between messages.
+        await Promise.resolve();
         currentStream.signal.throwIfAborted();
         stream.publish(message);
         if ("createSurface" in message) this.surfaceCreated = true;

@@ -29,7 +29,7 @@ Instances with the same backend and session ID share one application runtime and
 
 Server sessions remain in memory until the server stops. SharedWorker state lasts for the worker lifetime. Durable persistence remains application-owned.
 
-`@rs-a2ui/web` has no rendering dependency. `src/mount-a2ui.ts` is the example-owned Lit adapter. Replace it to use another renderer without changing either Rust runtime.
+`@sdui/web` has no rendering dependency. `src/mount-a2ui.ts` is the example-owned Lit adapter. Replace it to use another renderer without changing either Rust runtime.
 
 ## Todo behavior
 
@@ -44,20 +44,20 @@ pnpm install
 pnpm run dev
 ```
 
-The command builds `@rs-a2ui/web` and WASM, reserves a dynamic internal WebSocket port, starts the Rust server, and starts the named `a2ui-browser` portless route. Vite proxies same-origin `/ws` connections to Rust. Portless supplies the dynamic Vite `PORT` and prints the local `.localhost` URL.
+The command builds `@sdui/web` and WASM, reserves a dynamic internal WebSocket port, starts the Rust server, and starts the named `sdui-browser` portless route. Vite proxies same-origin `/ws` connections to Rust. Portless supplies the dynamic Vite `PORT` and prints the local `.localhost` URL.
 
 Run only the native WebSocket server with:
 
 ```sh
-pnpm --filter @rs-a2ui/browser-example run server
+pnpm --filter @sdui/browser-example run server
 ```
 
-It listens on `127.0.0.1:8081` by default. Set `A2UI_WS_ADDR` to change the socket address.
+It listens on `127.0.0.1:8081` by default. Set `SERVER_WS_ADDR` to change the socket address.
 
 Run the native JSON state-loop example with:
 
 ```sh
-cargo run -p a2ui-browser-example
+cargo run -p sdui-browser-example
 ```
 
 ## Validate
@@ -65,7 +65,7 @@ cargo run -p a2ui-browser-example
 From the repository root:
 
 ```sh
-cargo test -p a2ui-browser-example
+cargo test -p sdui-browser-example
 pnpm run check
 pnpm run build
 ```

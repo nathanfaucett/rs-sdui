@@ -1,4 +1,4 @@
-# `@rs-a2ui/web`
+# `@sdui/web`
 
 Renderer-independent browser transport and SharedWorker synchronization for standard A2UI v1.0 messages.
 
@@ -9,7 +9,7 @@ This package does not mount components, create renderer elements, or depend on a
 Every connection exposes inbound messages as an `AsyncIterable` and accepts standard outbound renderer messages:
 
 ```ts
-import { SharedWorkerTransport } from "@rs-a2ui/web";
+import { SharedWorkerTransport } from "@sdui/web";
 
 const transport = new SharedWorkerTransport(
   () =>
@@ -30,7 +30,7 @@ connection.send(rendererMessage);
 `WebSocketTransport` connects the same contract to a standard WebSocket. Each text frame contains one standard A2UI JSON message:
 
 ```ts
-import { WebSocketTransport } from "@rs-a2ui/web";
+import { WebSocketTransport } from "@sdui/web";
 
 const transport = new WebSocketTransport(
   "wss://example.com/ws?session=my-session",
@@ -42,19 +42,19 @@ Use the URL for application session routing. Do not add custom fields to A2UI me
 
 ## SharedWorker application
 
-`@rs-a2ui/web/worker` owns initialization, action serialization, ordered broadcasts, late-client snapshots, and port cleanup. Supply the generated WASM module:
+`@sdui/web/worker` owns initialization, action serialization, ordered broadcasts, late-client snapshots, and port cleanup. Supply the generated WASM module:
 
 ```ts
-import { startApplicationWorker } from "@rs-a2ui/web/worker";
+import { startApplicationWorker } from "@sdui/web/worker";
 import init, * as application from "./pkg/browser";
 
 startApplicationWorker({ application, initialize: init });
 ```
 
-The `a2ui` Rust crate owns the `wasm_bindgen` lifecycle glue on WASM targets. Declare the application constructor and state type in the WASM crate:
+The `sdui` Rust crate owns the `wasm_bindgen` lifecycle glue on WASM targets. Declare the application constructor and state type in the WASM crate:
 
 ```rust
-a2ui::export_application!(crate::application, crate::TodoApp);
+sdui::export_application!(crate::application, crate::TodoApp);
 ```
 
 The invoking Rust crate must depend directly on `wasm-bindgen`. The macro exports `initial_messages()`, `snapshot_messages()`, and async `handle_action(input)`. These functions exchange JSON strings containing only standard A2UI messages. TypeScript owns worker synchronization; Rust owns application execution and FFI.

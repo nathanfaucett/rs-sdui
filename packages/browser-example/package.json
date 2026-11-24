@@ -1,24 +1,24 @@
 {
-  "name": "@rs-a2ui/browser-example",
+  "name": "@sdui/browser-example",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build:wasm": "wasm-pack build --target web --out-dir ../src/pkg --out-name browser rust",
-    "predev": "pnpm --filter @rs-a2ui/web build && pnpm run build:wasm",
+    "predev": "pnpm --filter @sdui/web build && pnpm run build:wasm",
     "dev": "node scripts/serve.ts dev",
-    "prebuild": "pnpm --filter @rs-a2ui/web build",
+    "prebuild": "pnpm --filter @sdui/web build",
     "build": "pnpm run build:wasm && vite build",
     "preview": "node scripts/serve.ts preview",
-    "server": "cargo run -p a2ui-browser-example --bin server",
-    "precheck": "pnpm --filter @rs-a2ui/web build && pnpm run build:wasm",
+    "server": "cargo run -p sdui-browser-example --bin server",
+    "precheck": "pnpm --filter @sdui/web build && pnpm run build:wasm",
     "check": "tsc --noEmit",
     "format": "biome format --write ."
   },
   "dependencies": {
     "@a2ui/lit": "0.16.0",
     "@a2ui/web_core": "0.16.1",
-    "@rs-a2ui/web": "workspace:*"
+    "@sdui/web": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.5",

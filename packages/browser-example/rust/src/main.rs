@@ -1,6 +1,6 @@
-use a2ui::{ActionEvent, ActionMessage, ProtocolVersion};
-use a2ui_browser_example::{SURFACE_ID, application};
 use futures::executor::block_on;
+use sdui::{ActionEvent, ActionMessage, ProtocolVersion};
+use sdui_browser_example::{SURFACE_ID, application};
 use serde_json::{Map, Value, json};
 
 fn main() {

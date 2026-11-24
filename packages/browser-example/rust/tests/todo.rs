@@ -1,6 +1,6 @@
-use a2ui::{ActionEvent, ActionMessage, AgentToRendererMessage, ProtocolVersion};
-use a2ui_browser_example::{Filter, SURFACE_ID, TodoApp, application};
 use futures::executor::block_on;
+use sdui::{ActionEvent, ActionMessage, AgentToRendererMessage, ProtocolVersion};
+use sdui_browser_example::{Filter, SURFACE_ID, TodoApp, application};
 use serde_json::{Map, Value, json};
 
 #[test]

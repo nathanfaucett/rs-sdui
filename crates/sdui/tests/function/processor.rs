@@ -1,10 +1,10 @@
 use crate::support::{agent_call, custom_catalogs, function_call};
-use a2ui::function::{Dispatch, RendererMessageProcessor};
-use a2ui::{
+use futures::executor::block_on;
+use sdui::function::{Dispatch, RendererMessageProcessor};
+use sdui::{
     AgentToRendererMessage, FunctionError, FunctionResponse, ProtocolVersion,
     RendererFunctionResponseMessage, RendererToAgentMessage,
 };
-use futures::executor::block_on;
 use serde::Deserialize;
 use serde_json::{Value, json};
 

@@ -1,9 +1,9 @@
 use std::time::Duration;
 
 use crate::support::{custom_catalogs, function_call};
-use a2ui::function::RendererFunctionCalls;
-use a2ui::{FunctionError, FunctionResponse, ProtocolVersion, RendererFunctionResponseMessage};
 use futures::executor::block_on;
+use sdui::function::RendererFunctionCalls;
+use sdui::{FunctionError, FunctionResponse, ProtocolVersion, RendererFunctionResponseMessage};
 use serde_json::{Value, json};
 
 fn success(id: &str, value: Value) -> RendererFunctionResponseMessage {

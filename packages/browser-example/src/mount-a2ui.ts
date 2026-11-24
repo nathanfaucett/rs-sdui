@@ -4,7 +4,7 @@ import "@a2ui/lit";
 import { MessageProcessor } from "@a2ui/web_core";
 import { basicCatalog } from "@a2ui/web_core/catalogs/basic/v1";
 import { RendererToAgentMessageSchema } from "@a2ui/web_core/v1_0";
-import type { Connection, Transport } from "@rs-a2ui/web";
+import type { Connection, Transport } from "@sdui/web";
 
 /**
  * Mounts one transport session.

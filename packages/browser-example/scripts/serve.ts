@@ -18,13 +18,13 @@ await new Promise<void>((resolve, reject) => {
   reservation.close((error) => (error ? reject(error) : resolve()));
 });
 
-const env = { ...process.env, A2UI_WS_ADDR: websocketAddress };
+const env = { ...process.env, SERVER_WS_ADDR: websocketAddress };
 const children = [
-  spawn("cargo", ["run", "--quiet", "-p", "a2ui-browser-example", "--bin", "server"], {
+  spawn("cargo", ["run", "--quiet", "-p", "sdui-browser-example", "--bin", "server"], {
     env,
     stdio: "inherit",
   }),
-  spawn("portless", ["a2ui-browser", "vite", mode], { env, stdio: "inherit" }),
+  spawn("portless", ["sdui-browser", "vite", mode], { env, stdio: "inherit" }),
 ];
 
 let stopping = false;

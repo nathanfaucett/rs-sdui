@@ -1,6 +1,6 @@
-use a2ui::basic::v1::{self, Button, ButtonVariant, Column, Text};
-use a2ui::{A2uiData, CheckRule, DataModel, DynamicString, Event, FunctionCall};
-use a2ui::{Element, EventExt};
+use sdui::basic::v1::{self, Button, ButtonVariant, Column, Text};
+use sdui::{A2uiData, CheckRule, DataModel, DynamicString, Event, FunctionCall};
+use sdui::{Element, EventExt};
 use serde::Serialize;
 use serde_json::json;
 

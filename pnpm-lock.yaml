@@ -181,7 +181,7 @@ importers:
       '@a2ui/web_core':
         specifier: 0.16.1
         version: 0.16.1
-      '@rs-a2ui/web':
+      '@sdui/web':
         specifier: workspace:*
         version: link:../web
     devDependencies:

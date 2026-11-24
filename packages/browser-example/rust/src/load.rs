@@ -1,6 +1,6 @@
-use a2ui::BoxError;
 #[cfg(not(target_arch = "wasm32"))]
 use futures::future::ready;
+use sdui::BoxError;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]

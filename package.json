@@ -1,11 +1,11 @@
 {
-  "name": "@rs-a2ui/monorepo",
+  "name": "@sdui/monorepo",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.4.1",
   "scripts": {
-    "dev": "pnpm --filter @rs-a2ui/browser-example run dev",
-    "preview": "pnpm --filter @rs-a2ui/browser-example run preview",
+    "dev": "pnpm --filter @sdui/browser-example run dev",
+    "preview": "pnpm --filter @sdui/browser-example run preview",
     "build": "pnpm -r --workspace-concurrency=2 run build",
     "check": "pnpm -r run check && pnpm run lint",
     "test": "cargo test --workspace",

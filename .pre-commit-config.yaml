@@ -1,0 +1,15 @@
+repos:
+  - repo: local
+    hooks:
+      - id: rustfmt-check
+        name: Check Rust formatting
+        entry: rustfmt --edition 2024 --check --config skip_children=true
+        language: system
+        files: \.rs$
+        pass_filenames: true
+      - id: biome-check
+        name: Check web formatting and lint
+        entry: pnpm exec biome check --error-on-warnings
+        language: system
+        files: \.(css|html|js|jsx|json|jsonc|ts|tsx)$
+        pass_filenames: true

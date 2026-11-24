@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use a2ui::{ActionEvent, ActionMessage, ProtocolVersion};
-use a2ui_browser_example::server::serve;
 use futures::{SinkExt, StreamExt};
+use sdui::{ActionEvent, ActionMessage, ProtocolVersion};
+use sdui_browser_example::server::serve;
 use serde_json::{Map, Value, json};
 use tokio::{
     net::{TcpListener, TcpStream},

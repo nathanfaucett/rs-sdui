@@ -3,7 +3,7 @@ import {
   SharedWorkerTransport,
   type Transport,
   WebSocketTransport,
-} from "@rs-a2ui/web";
+} from "@sdui/web";
 import { mountA2ui } from "./mount-a2ui";
 import "./style.css";
 

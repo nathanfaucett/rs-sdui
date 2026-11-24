@@ -1,5 +1,5 @@
 use crate::support::{BASIC_CATALOG, CUSTOM_CATALOG, basic_catalogs, custom_catalogs};
-use a2ui::function::{Catalog, CatalogSet, ReturnType};
+use sdui::function::{Catalog, CatalogSet, ReturnType};
 use serde_json::json;
 
 #[test]

@@ -1,5 +1,5 @@
 [package]
-name = "a2ui-browser-example"
+name = "sdui-browser-example"
 description = "Vite and official A2UI Lit renderer example"
 version.workspace = true
 authors.workspace = true
@@ -8,13 +8,13 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish = false
-default-run = "a2ui-browser-example"
+default-run = "sdui-browser-example"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-a2ui.workspace = true
+sdui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 

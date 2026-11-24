@@ -8,12 +8,12 @@ authors = []
 edition = "2024"
 rust-version = "1.100"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/nathanfaucett/rs-a2ui"
+repository = "https://github.com/nathanfaucett/rs-sdui"
 
 [workspace.dependencies]
-a2ui = { path = "crates/a2ui" }
-a2ui-codegen = { path = "crates/a2ui-codegen" }
-a2ui-derive = { path = "crates/a2ui-derive" }
+sdui = { path = "crates/sdui" }
+sdui-codegen = { path = "crates/sdui-codegen" }
+sdui-derive = { path = "crates/sdui-derive" }
 futures = { version = "0.3", default-features = false, features = ["executor"] }
 futures-channel = { version = "0.3", default-features = false, features = ["alloc"] }
 futures-timer = "3"

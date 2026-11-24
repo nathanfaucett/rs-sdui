@@ -33,11 +33,11 @@ pub fn derive(input: TokenStream) -> Result<TokenStream> {
 fn leaf(ident: &syn::Ident) -> TokenStream {
     quote! {
         #[automatically_derived]
-        impl ::a2ui::A2uiData for #ident {
-            type Path = ::a2ui::DataBinding;
+        impl ::sdui::A2uiData for #ident {
+            type Path = ::sdui::DataBinding;
 
-            fn from_path(path: ::a2ui::StatePath) -> Self::Path {
-                ::a2ui::DataBinding::new(path.into_string())
+            fn from_path(path: ::sdui::StatePath) -> Self::Path {
+                ::sdui::DataBinding::new(path.into_string())
             }
         }
     }
@@ -75,8 +75,8 @@ fn structure(
             };
             Ok(Some(quote! {
                 #[must_use]
-                #field_vis fn #field_ident(&self) -> <#field_type as ::a2ui::A2uiData>::Path {
-                    <#field_type as ::a2ui::A2uiData>::from_path(#path)
+                #field_vis fn #field_ident(&self) -> <#field_type as ::sdui::A2uiData>::Path {
+                    <#field_type as ::sdui::A2uiData>::from_path(#path)
                 }
             }))
         })
@@ -85,14 +85,14 @@ fn structure(
     Ok(quote! {
         #[derive(Clone, Debug)]
         #vis struct #paths {
-            path: ::a2ui::StatePath,
+            path: ::sdui::StatePath,
         }
 
         #[automatically_derived]
-        impl ::a2ui::A2uiData for #ident {
+        impl ::sdui::A2uiData for #ident {
             type Path = #paths;
 
-            fn from_path(path: ::a2ui::StatePath) -> Self::Path {
+            fn from_path(path: ::sdui::StatePath) -> Self::Path {
                 #paths { path }
             }
         }
@@ -100,7 +100,7 @@ fn structure(
         impl #ident {
             #[must_use]
             #vis fn paths() -> #paths {
-                <Self as ::a2ui::A2uiData>::from_path(::a2ui::StatePath::root())
+                <Self as ::sdui::A2uiData>::from_path(::sdui::StatePath::root())
             }
         }
 

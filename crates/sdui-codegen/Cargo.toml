@@ -1,21 +1,20 @@
 [package]
-name = "a2ui-derive"
-description = "Derive typed A2UI data bindings from Serde state"
+name = "sdui-codegen"
+description = "Build-time Rust helper generation from official A2UI catalog schemas"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-keywords = ["a2ui", "derive", "state", "json"]
-categories = ["development-tools::procedural-macro-helpers"]
-
-[lib]
-proc-macro = true
+keywords = ["sdui", "a2ui", "codegen", "build", "schema"]
+categories = ["development-tools::build-utils"]
 
 [dependencies]
+prettyplease.workspace = true
 proc-macro2.workspace = true
 quote.workspace = true
+serde_json.workspace = true
 syn.workspace = true
 
 [lints]

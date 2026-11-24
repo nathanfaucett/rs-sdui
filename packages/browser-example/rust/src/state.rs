@@ -1,4 +1,4 @@
-use a2ui::A2uiData;
+use sdui::A2uiData;
 use serde::Serialize;
 
 #[derive(A2uiData, Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]

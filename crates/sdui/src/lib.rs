@@ -1,9 +1,9 @@
-//! State-driven applications and transport-independent authoring for A2UI v1.0.
+//! Server-driven UI applications and transport-independent authoring for A2UI v1.0.
 //!
 //! Rendering, transport, and renderer-side expression evaluation stay outside
 //! this crate. Function validation and RPC are available through `function`.
 
-extern crate self as a2ui;
+extern crate self as sdui;
 
 mod app;
 pub mod basic;
@@ -14,7 +14,6 @@ mod view;
 #[cfg(target_arch = "wasm32")]
 mod wasm;
 
-pub use a2ui_derive::A2uiData;
 pub use app::{application::Application, error::ApplicationError};
 pub use protocol::{
     component::{CheckRule, ChildList, ChildTemplate, Component, Condition},
@@ -33,6 +32,7 @@ pub use protocol::{
     },
     state::{A2uiData, CollectionPath, StatePath},
 };
+pub use sdui_derive::A2uiData;
 pub use view::{
     action::{ActionResult, BoxError, IntoActionResult},
     effect::Effect,

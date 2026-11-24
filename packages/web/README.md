@@ -51,10 +51,10 @@ import init, * as application from "./pkg/browser";
 startApplicationWorker({ application, initialize: init });
 ```
 
-The companion `a2ui-wasm` Rust crate owns the `wasm_bindgen` lifecycle glue. Declare the application constructor and state type in the WASM crate:
+The `a2ui` Rust crate owns the `wasm_bindgen` lifecycle glue on WASM targets. Declare the application constructor and state type in the WASM crate:
 
 ```rust
-a2ui_wasm::export_application!(crate::application, crate::TodoApp);
+a2ui::export_application!(crate::application, crate::TodoApp);
 ```
 
 The invoking Rust crate must depend directly on `wasm-bindgen`. The macro exports `initial_messages()`, `snapshot_messages()`, and async `handle_action(input)`. These functions exchange JSON strings containing only standard A2UI messages. TypeScript owns worker synchronization; Rust owns application execution and FFI.

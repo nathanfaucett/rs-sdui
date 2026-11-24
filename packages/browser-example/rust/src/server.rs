@@ -1,7 +1,7 @@
 use std::{collections::HashMap, io, net::SocketAddr, sync::Arc};
 
-use a2ui_app::Application;
-use a2ui_author::{AgentToRendererMessage, RendererToAgentMessage};
+use a2ui::Application;
+use a2ui::{AgentToRendererMessage, RendererToAgentMessage};
 use form_urlencoded::parse as parse_query;
 use futures::{SinkExt, StreamExt, stream::SplitSink};
 use tokio::{

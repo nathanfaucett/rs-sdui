@@ -1,5 +1,5 @@
-use a2ui_app::Application;
-use a2ui_basic::v1;
+use a2ui::Application;
+use a2ui::basic::v1;
 
 use crate::state::TodoApp;
 

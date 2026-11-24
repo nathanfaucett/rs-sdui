@@ -1,1 +1,1 @@
-a2ui_wasm::export_application!(crate::application, crate::TodoApp);
+a2ui::export_application!(crate::application, crate::TodoApp);

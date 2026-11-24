@@ -1,5 +1,5 @@
-use a2ui_author::ActionEvent;
-use a2ui_view::{ActionResult, BoxError};
+use a2ui::ActionEvent;
+use a2ui::{ActionResult, BoxError};
 use serde_json::Value;
 
 use crate::{

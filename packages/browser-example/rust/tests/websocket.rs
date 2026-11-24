@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use a2ui_author::{ActionEvent, ActionMessage, ProtocolVersion};
+use a2ui::{ActionEvent, ActionMessage, ProtocolVersion};
 use a2ui_browser_example::server::serve;
 use futures::{SinkExt, StreamExt};
 use serde_json::{Map, Value, json};

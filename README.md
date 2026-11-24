@@ -8,16 +8,11 @@ This workspace is not a full A2UI Core SDK, Agent SDK, or renderer. Official A2U
 
 ## Rust crates
 
-| Crate           | Purpose                                                                                                                                |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `a2ui-app`      | Owned state machines, declarative view mounting, automatic state data models, action decoding, component diffs, and surface lifecycle. |
-| `a2ui-author`   | Transport-independent A2UI v1.0 messages, components, bindings, actions, and function calls.                                           |
-| `a2ui-codegen`  | `build.rs` generation of typed component builders and function helpers from catalog JSON Schema files.                                 |
-| `a2ui-derive`   | Implementation of the `A2uiData` derive exported by `a2ui-author`.                                                                     |
-| `a2ui-function` | Offline catalog function validation, typed agent handlers, renderer-call correlation, timeouts, cancellation, and message dispatch.    |
-| `a2ui-view`     | Declarative element trees, child composition, typed event callbacks, and async effects.                                                |
-| `a2ui-wasm`     | Reusable `wasm_bindgen` lifecycle exports for local browser applications.                                                              |
-| `a2ui-basic`    | Generated helpers for the official v1.0 Basic Catalog. Its catalog file is copied verbatim from `a2ui-project/a2ui`.                   |
+| Crate          | Purpose                                                                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `a2ui`         | Protocol types, owned state machines, declarative views, generated Basic Catalog helpers, and browser lifecycle exports. Enable `function` for validation and RPC. |
+| `a2ui-codegen` | `build.rs` generation of typed component builders and function helpers from catalog JSON Schema files.                                                             |
+| `a2ui-derive`  | Proc-macro implementation of the `A2uiData` derive exported by `a2ui`.                                                                                             |
 
 No third-party Rust A2UI implementation is used.
 
@@ -40,10 +35,8 @@ The interface follows two useful Rust UI patterns:
 Standard events and their state transitions are declared together in the view. No application trait, message enum, reducer, action registry, or action-conversion impl is required.
 
 ```rust
-use a2ui_app::Application;
-use a2ui_author::{A2uiData, ActionMessage, DataBinding, Event};
-use a2ui_basic::v1::{self, Button, Column, Text};
-use a2ui_view::{Element, EventExt};
+use a2ui::basic::v1::{self, Button, Column, Text};
+use a2ui::{A2uiData, ActionMessage, Application, DataBinding, Element, Event, EventExt};
 use serde::Serialize;
 
 #[derive(A2uiData, Clone, Default, Serialize)]
@@ -155,7 +148,7 @@ A2UI represents the tree as a flat component list with generated ID references. 
 ]
 ```
 
-The complete visual tree and state are JSON. Rust transitions and I/O callbacks are application behavior and intentionally have no A2UI JSON representation. The exact multi-component wire shape is also asserted in `crates/a2ui-app/tests/application.rs`.
+The complete visual tree and state are JSON. Rust transitions and I/O callbacks are application behavior and intentionally have no A2UI JSON representation. The exact multi-component wire shape is also asserted in `crates/a2ui/tests/app/application.rs`.
 
 Incrementing this counter emits only:
 
@@ -193,15 +186,15 @@ Serialize each returned `AgentToRendererMessage` in order. Send it through a loc
 
 One `Application` owns one fixed surface ID and catalog. Use separate instances with unique surface IDs for multiple surfaces. Capture clients and other external resources in action/effect callbacks instead of storing them in cloned UI state.
 
-`Application::handle` intentionally accepts only standard `action` envelopes. Use `a2ui-function::RendererMessageProcessor` for function RPC. Its `Dispatch::Unhandled` variant returns ordinary actions and errors to the application or agent loop. `a2ui-app` does not evaluate expressions.
+`Application::handle` intentionally accepts only standard `action` envelopes. Enable the `function` feature and use `a2ui::function::RendererMessageProcessor` for function RPC. Its `Dispatch::Unhandled` variant returns ordinary actions and errors to the application or agent loop. `Application` does not evaluate expressions.
 
 ## Catalog functions
 
 Generated function builders have typed required arguments, typed fluent optional arguments, and conversions based on `returnType`, `allowedCallers`, and `requiresUserActivation`:
 
 ```rust
-use a2ui_author::CheckRule;
-use a2ui_basic::v1::{self, Button, Text};
+use a2ui::CheckRule;
+use a2ui::basic::v1::{self, Button, Text};
 
 let price = Text::new(
     v1::functions::format_currency("USD", Booking::paths().price())
@@ -217,11 +210,11 @@ let help = Button::new(
 
 Use renderer functions for formatting, checks, and local actions. Use `Event` transitions for authoritative application state. Use agent functions for discrete backend operations without an LLM turn.
 
-`a2ui-function` validates complete function calls offline against the official common schema and each catalog. `AgentFunctions::register` deserializes resolved arguments into a Rust type and validates the return JSON. `RendererFunctionCalls` correlates `functionCallId`, validates results, and supports optional timeouts, explicit cancellation, surface cancellation, and disposal. No executor or transport is selected.
+The optional `a2ui::function` module validates complete function calls offline against the official common schema and each catalog. `AgentFunctions::register` deserializes resolved arguments into a Rust type and validates the return JSON. `RendererFunctionCalls` correlates `functionCallId`, validates results, and supports optional timeouts, explicit cancellation, surface cancellation, and disposal. No executor or transport is selected.
 
 ```rust,ignore
-let catalogs = a2ui_function::CatalogSet::from_json(catalog_json)?;
-let mut processor = a2ui_function::RendererMessageProcessor::new(catalogs);
+let catalogs = a2ui::function::CatalogSet::from_json(catalog_json)?;
+let mut processor = a2ui::function::RendererMessageProcessor::new(catalogs);
 processor.agent_functions_mut().register(
     catalog_id,
     "checkInventory",
@@ -231,19 +224,19 @@ processor.agent_functions_mut().register(
 )?;
 
 match processor.process(renderer_message).await {
-    a2ui_function::Dispatch::Handled(messages) => send(messages),
-    a2ui_function::Dispatch::Unhandled(a2ui_author::RendererToAgentMessage::Action(action)) => {
+    a2ui::function::Dispatch::Handled(messages) => send(messages),
+    a2ui::function::Dispatch::Unhandled(a2ui::RendererToAgentMessage::Action(action)) => {
         send(app.handle(action).await?);
     }
-    a2ui_function::Dispatch::Unhandled(message) => handle_other(message),
+    a2ui::function::Dispatch::Unhandled(message) => handle_other(message),
 }
 ```
 
 ## Author a surface without the runtime
 
 ```rust
-use a2ui_author::{A2uiData, Event};
-use a2ui_basic::v1::{self, Button, Column, Text};
+use a2ui::basic::v1::{self, Button, Column, Text};
+use a2ui::{A2uiData, Event};
 use serde::Serialize;
 
 #[derive(A2uiData, Serialize)]
@@ -271,7 +264,7 @@ The result is a standard `createSurface` message with `version: "1.0"`.
 
 ## Generate helpers for your catalogs
 
-Add `a2ui-author`, `a2ui-view`, and `serde_json` as dependencies, and `a2ui-codegen` as a build dependency.
+Add `a2ui` and `serde_json` as dependencies, and `a2ui-codegen` as a build dependency.
 
 ```rust
 // build.rs
@@ -309,7 +302,7 @@ The todo page implements add, edit, complete/reopen, delete, filter, clear compl
 
 The page starts with two configurable application instances. **Add instance** creates more. Each instance selects a WASM SharedWorker or the native Rust WebSocket server and a session ID. Instances with the same backend and session ID share one runtime; a different ID creates independent state. Both backends serialize actions and effects, broadcast ordered updates, and send `snapshot()` to late clients. Renderer-local edits remain local until an action, as A2UI specifies.
 
-WASM is necessary because the Rust application executes inside that browser worker. `a2ui-wasm` owns the reusable FFI; the example declares only `a2ui_wasm::export_application!(crate::application, crate::TodoApp)`. `@rs-a2ui/web` owns worker synchronization. A server-hosted Rust application does not need either browser binding.
+WASM is necessary because the Rust application executes inside that browser worker. `a2ui` owns the reusable FFI on WASM targets; the example declares only `a2ui::export_application!(crate::application, crate::TodoApp)`. `@rs-a2ui/web` owns worker synchronization. A server-hosted Rust application does not use the browser binding.
 
 `packages/web` defines the renderer-independent `Transport`/`Connection` seam and SharedWorker lifecycle helpers. Every connection exposes inbound messages as an `AsyncIterable` and accepts outbound renderer messages through `send()`. `SharedWorkerTransport`, `WebSocketTransport`, and `LocalStreamTransport` implement the same contract. The wire contains standard A2UI messages only; session IDs belong in worker names and WebSocket URLs. The example owns its Lit adapter in `packages/browser-example/src/mount-a2ui.ts`; other applications can use any rendering library.
 
@@ -329,8 +322,8 @@ The example uses official `@a2ui/web_core 0.16.1` and `@a2ui/lit 0.16.0` with th
 ## Validation
 
 ```sh
-cargo test --workspace
-cargo clippy --workspace --all-targets
+cargo test --workspace --all-features
+cargo clippy --workspace --all-targets --all-features
 ```
 
 ## Scope

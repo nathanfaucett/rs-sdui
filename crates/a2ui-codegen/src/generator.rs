@@ -102,8 +102,8 @@ fn render_catalog(module: &str, document: &Value) -> Result<TokenStream, Box<dyn
             #[must_use]
             pub fn surface(
                 surface_id: impl Into<String>,
-            ) -> ::a2ui_view::Surface {
-                ::a2ui_view::Surface::new(surface_id, CATALOG_ID)
+            ) -> ::a2ui::CreateSurface {
+                ::a2ui::CreateSurface::new(surface_id, CATALOG_ID)
             }
 
             #(#components)*
@@ -320,7 +320,7 @@ fn render_component(
         quote! {
             pub fn checks(
                 mut self,
-                checks: impl IntoIterator<Item = ::a2ui_author::CheckRule>,
+                checks: impl IntoIterator<Item = ::a2ui::CheckRule>,
             ) -> Self {
                 let checks = checks
                     .into_iter()
@@ -337,14 +337,14 @@ fn render_component(
         #docs
         #[derive(Debug)]
         #[must_use]
-        pub struct #builder(::a2ui_view::Element);
+        pub struct #builder(::a2ui::Element);
 
         impl #builder {
             pub fn new(
                 #(#parameters),*
             ) -> Self {
-                let element = ::a2ui_view::Element::new(
-                    ::a2ui_author::Component::new("", #name)
+                let element = ::a2ui::Element::new(
+                    ::a2ui::Component::new("", #name)
                 );
                 #(#required_setters)*
                 Self(element)
@@ -359,7 +359,7 @@ fn render_component(
             #check_setter
         }
 
-        impl From<#builder> for ::a2ui_view::Element {
+        impl From<#builder> for ::a2ui::Element {
             fn from(value: #builder) -> Self {
                 value.0
             }
@@ -504,20 +504,14 @@ fn render_function(name: &str, schema: &Value) -> Result<TokenStream, Box<dyn Er
         .and_then(Value::as_bool)
         .unwrap_or(false);
     let dynamic_types = match schema.get("returnType").and_then(Value::as_str) {
-        Some("string") => vec![
-            quote!(::a2ui_author::DynamicString),
-            quote!(::a2ui_author::DynamicValue),
-        ],
-        Some("number") => vec![
-            quote!(::a2ui_author::DynamicNumber),
-            quote!(::a2ui_author::DynamicValue),
-        ],
+        Some("string") => vec![quote!(::a2ui::DynamicString), quote!(::a2ui::DynamicValue)],
+        Some("number") => vec![quote!(::a2ui::DynamicNumber), quote!(::a2ui::DynamicValue)],
         Some("boolean" | "validationResult") => vec![
-            quote!(::a2ui_author::DynamicBoolean),
-            quote!(::a2ui_author::DynamicValue),
-            quote!(::a2ui_author::Condition),
+            quote!(::a2ui::DynamicBoolean),
+            quote!(::a2ui::DynamicValue),
+            quote!(::a2ui::Condition),
         ],
-        Some("array" | "object" | "any") => vec![quote!(::a2ui_author::DynamicValue)],
+        Some("array" | "object" | "any") => vec![quote!(::a2ui::DynamicValue)],
         _ => Vec::new(),
     };
     let dynamic_conversions = if agent_only || requires_user_activation {
@@ -529,7 +523,7 @@ fn render_function(name: &str, schema: &Value) -> Result<TokenStream, Box<dyn Er
                 quote! {
                     impl From<#builder> for #target {
                         fn from(value: #builder) -> Self {
-                            ::a2ui_author::FunctionCall::from(value).into()
+                            ::a2ui::FunctionCall::from(value).into()
                         }
                     }
                 }
@@ -538,9 +532,9 @@ fn render_function(name: &str, schema: &Value) -> Result<TokenStream, Box<dyn Er
     };
     let view_action_conversion = (!agent_only).then(|| {
         quote! {
-            impl From<#builder> for ::a2ui_view::ViewAction {
+            impl From<#builder> for ::a2ui::ViewAction {
                 fn from(value: #builder) -> Self {
-                    ::a2ui_author::FunctionCall::from(value).into()
+                    ::a2ui::FunctionCall::from(value).into()
                 }
             }
         }
@@ -551,7 +545,7 @@ fn render_function(name: &str, schema: &Value) -> Result<TokenStream, Box<dyn Er
         #docs
         #[derive(Debug)]
         #[must_use]
-        pub struct #builder(::a2ui_author::FunctionCall);
+        pub struct #builder(::a2ui::FunctionCall);
 
         impl #builder {
             #(#optional_setters)*
@@ -560,13 +554,13 @@ fn render_function(name: &str, schema: &Value) -> Result<TokenStream, Box<dyn Er
         #docs
         pub fn #function_name(#(#parameters),*) -> #builder {
             #builder(
-                ::a2ui_author::FunctionCall::new(#name)
+                ::a2ui::FunctionCall::new(#name)
                     .catalog_id(super::CATALOG_ID)
                     #(#setters)*
             )
         }
 
-        impl From<#builder> for ::a2ui_author::FunctionCall {
+        impl From<#builder> for ::a2ui::FunctionCall {
             fn from(value: #builder) -> Self {
                 value.0
             }
@@ -652,16 +646,16 @@ fn string_enum(schema: &Value) -> Option<Vec<String>> {
 
 fn input_type(kind: &PropertyKind) -> TokenStream {
     match kind {
-        PropertyKind::DynamicString => quote!(impl Into<::a2ui_author::DynamicString>),
-        PropertyKind::DynamicNumber => quote!(impl Into<::a2ui_author::DynamicNumber>),
-        PropertyKind::DynamicBoolean => quote!(impl Into<::a2ui_author::DynamicBoolean>),
-        PropertyKind::DynamicStringList => quote!(impl Into<::a2ui_author::DynamicStringList>),
-        PropertyKind::DynamicValue => quote!(impl Into<::a2ui_author::DynamicValue>),
-        PropertyKind::ChildList => quote!(impl ::a2ui_view::IntoChildren),
-        PropertyKind::Child => quote!(impl Into<::a2ui_view::Element>),
-        PropertyKind::Action => quote!(impl Into<::a2ui_view::ViewAction>),
-        PropertyKind::FunctionCall => quote!(impl Into<::a2ui_author::FunctionCall>),
-        PropertyKind::DataBinding => quote!(impl Into<::a2ui_author::DataBinding>),
+        PropertyKind::DynamicString => quote!(impl Into<::a2ui::DynamicString>),
+        PropertyKind::DynamicNumber => quote!(impl Into<::a2ui::DynamicNumber>),
+        PropertyKind::DynamicBoolean => quote!(impl Into<::a2ui::DynamicBoolean>),
+        PropertyKind::DynamicStringList => quote!(impl Into<::a2ui::DynamicStringList>),
+        PropertyKind::DynamicValue => quote!(impl Into<::a2ui::DynamicValue>),
+        PropertyKind::ChildList => quote!(impl ::a2ui::IntoChildren),
+        PropertyKind::Child => quote!(impl Into<::a2ui::Element>),
+        PropertyKind::Action => quote!(impl Into<::a2ui::ViewAction>),
+        PropertyKind::FunctionCall => quote!(impl Into<::a2ui::FunctionCall>),
+        PropertyKind::DataBinding => quote!(impl Into<::a2ui::DataBinding>),
         PropertyKind::String => quote!(impl Into<String>),
         PropertyKind::Number => quote!(f64),
         PropertyKind::Integer => quote!(i64),
@@ -674,38 +668,38 @@ fn input_type(kind: &PropertyKind) -> TokenStream {
 fn input_value(kind: &PropertyKind, name: &Ident) -> TokenStream {
     match kind {
         PropertyKind::DynamicString => {
-            quote!(::serde_json::Value::from(Into::<::a2ui_author::DynamicString>::into(#name)))
+            quote!(::serde_json::Value::from(Into::<::a2ui::DynamicString>::into(#name)))
         }
         PropertyKind::DynamicNumber => {
-            quote!(::serde_json::Value::from(Into::<::a2ui_author::DynamicNumber>::into(#name)))
+            quote!(::serde_json::Value::from(Into::<::a2ui::DynamicNumber>::into(#name)))
         }
         PropertyKind::DynamicBoolean => {
-            quote!(::serde_json::Value::from(Into::<::a2ui_author::DynamicBoolean>::into(#name)))
+            quote!(::serde_json::Value::from(Into::<::a2ui::DynamicBoolean>::into(#name)))
         }
         PropertyKind::DynamicStringList => {
-            quote!(::serde_json::Value::from(Into::<::a2ui_author::DynamicStringList>::into(#name)))
+            quote!(::serde_json::Value::from(Into::<::a2ui::DynamicStringList>::into(#name)))
         }
         PropertyKind::DynamicValue => {
-            quote!(::serde_json::Value::from(Into::<::a2ui_author::DynamicValue>::into(#name)))
+            quote!(::serde_json::Value::from(Into::<::a2ui::DynamicValue>::into(#name)))
         }
         PropertyKind::ChildList => {
-            quote!(::serde_json::Value::from(Into::<::a2ui_author::ChildList>::into(#name)))
+            quote!(::serde_json::Value::from(Into::<::a2ui::ChildList>::into(#name)))
         }
         PropertyKind::Child => {
             quote!(::serde_json::Value::String(Into::<String>::into(#name)))
         }
         PropertyKind::Action => {
-            quote!(::serde_json::Value::from(Into::<::a2ui_author::Action>::into(#name)))
+            quote!(::serde_json::Value::from(Into::<::a2ui::Action>::into(#name)))
         }
         PropertyKind::FunctionCall => {
-            quote!(::serde_json::Value::from(Into::<::a2ui_author::FunctionCall>::into(#name)))
+            quote!(::serde_json::Value::from(Into::<::a2ui::FunctionCall>::into(#name)))
         }
         PropertyKind::DataBinding => {
-            quote!(::serde_json::Value::from(Into::<::a2ui_author::DataBinding>::into(#name)))
+            quote!(::serde_json::Value::from(Into::<::a2ui::DataBinding>::into(#name)))
         }
         PropertyKind::String => quote!(::serde_json::Value::String(Into::<String>::into(#name))),
         PropertyKind::Number => {
-            quote!(::serde_json::Value::from(::a2ui_author::number(#name)))
+            quote!(::serde_json::Value::from(::a2ui::number(#name)))
         }
         PropertyKind::Integer | PropertyKind::Boolean | PropertyKind::Enum(_) => {
             quote!(::serde_json::Value::from(#name))
@@ -814,7 +808,7 @@ mod tests {
             .to_string();
         let normalized = generated.split_whitespace().collect::<String>();
         assert!(generated.contains("pub struct Text"));
-        assert!(normalized.contains("text:implInto<::a2ui_author::DynamicString>"));
+        assert!(normalized.contains("text:implInto<::a2ui::DynamicString>"));
         assert!(generated.contains("pub fn variant"));
         assert!(generated.contains("pub enum TextVariant"));
     }

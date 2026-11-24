@@ -1,8 +1,8 @@
-use a2ui_author::{CheckRule, Event};
-use a2ui_basic::v1::{
+use a2ui::basic::v1::{
     self, Button, ButtonVariant, Card, Column, Row, Text, TextField, TextVariant,
 };
-use a2ui_view::{Effect, Element, EventExt};
+use a2ui::{CheckRule, Event};
+use a2ui::{Effect, Element, EventExt};
 use serde_json::{Value, json};
 
 use crate::{
@@ -180,6 +180,6 @@ fn todo_card(index: usize, todo: &Todo) -> Card {
     )))
 }
 
-fn non_empty_title(path: impl Into<a2ui_author::DynamicString>) -> CheckRule {
+fn non_empty_title(path: impl Into<a2ui::DynamicString>) -> CheckRule {
     CheckRule::new(v1::functions::regex("\\S", path)).message("Enter a non-whitespace title")
 }

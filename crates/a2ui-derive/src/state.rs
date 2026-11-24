@@ -33,11 +33,11 @@ pub fn derive(input: TokenStream) -> Result<TokenStream> {
 fn leaf(ident: &syn::Ident) -> TokenStream {
     quote! {
         #[automatically_derived]
-        impl ::a2ui_author::A2uiData for #ident {
-            type Path = ::a2ui_author::DataBinding;
+        impl ::a2ui::A2uiData for #ident {
+            type Path = ::a2ui::DataBinding;
 
-            fn from_path(path: ::a2ui_author::StatePath) -> Self::Path {
-                ::a2ui_author::DataBinding::new(path.into_string())
+            fn from_path(path: ::a2ui::StatePath) -> Self::Path {
+                ::a2ui::DataBinding::new(path.into_string())
             }
         }
     }
@@ -66,16 +66,17 @@ fn structure(
                 quote!(self.path.clone())
             } else {
                 let name = rules.rename.unwrap_or_else(|| {
-                    rename_all
-                        .as_deref()
-                        .map_or_else(|| field_name(field_ident), |rule| apply(rule, &field_name(field_ident)))
+                    rename_all.as_deref().map_or_else(
+                        || field_name(field_ident),
+                        |rule| apply(rule, &field_name(field_ident)),
+                    )
                 });
                 quote!(self.path.child(#name))
             };
             Ok(Some(quote! {
                 #[must_use]
-                #field_vis fn #field_ident(&self) -> <#field_type as ::a2ui_author::A2uiData>::Path {
-                    <#field_type as ::a2ui_author::A2uiData>::from_path(#path)
+                #field_vis fn #field_ident(&self) -> <#field_type as ::a2ui::A2uiData>::Path {
+                    <#field_type as ::a2ui::A2uiData>::from_path(#path)
                 }
             }))
         })
@@ -84,14 +85,14 @@ fn structure(
     Ok(quote! {
         #[derive(Clone, Debug)]
         #vis struct #paths {
-            path: ::a2ui_author::StatePath,
+            path: ::a2ui::StatePath,
         }
 
         #[automatically_derived]
-        impl ::a2ui_author::A2uiData for #ident {
+        impl ::a2ui::A2uiData for #ident {
             type Path = #paths;
 
-            fn from_path(path: ::a2ui_author::StatePath) -> Self::Path {
+            fn from_path(path: ::a2ui::StatePath) -> Self::Path {
                 #paths { path }
             }
         }
@@ -99,7 +100,7 @@ fn structure(
         impl #ident {
             #[must_use]
             #vis fn paths() -> #paths {
-                <Self as ::a2ui_author::A2uiData>::from_path(::a2ui_author::StatePath::root())
+                <Self as ::a2ui::A2uiData>::from_path(::a2ui::StatePath::root())
             }
         }
 

@@ -11,15 +11,11 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/nathanfaucett/rs-a2ui"
 
 [workspace.dependencies]
-a2ui-app = { path = "crates/a2ui-app" }
-a2ui-author = { path = "crates/a2ui-author" }
-a2ui-basic = { path = "crates/a2ui-basic" }
+a2ui = { path = "crates/a2ui" }
 a2ui-codegen = { path = "crates/a2ui-codegen" }
 a2ui-derive = { path = "crates/a2ui-derive" }
-a2ui-function = { path = "crates/a2ui-function" }
-a2ui-view = { path = "crates/a2ui-view" }
-a2ui-wasm = { path = "crates/a2ui-wasm" }
 futures = { version = "0.3", default-features = false, features = ["executor"] }
+futures-channel = { version = "0.3", default-features = false, features = ["alloc"] }
 futures-timer = "3"
 form_urlencoded = "1"
 js-sys = "0.3"

@@ -1,0 +1,37 @@
+[package]
+name = "a2ui"
+description = "State-driven Rust applications and authoring for the official A2UI v1.0 protocol"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["a2ui", "agent", "state", "ui", "wasm"]
+categories = ["api-bindings", "gui", "wasm"]
+
+[features]
+default = []
+function = ["dep:futures-channel", "dep:futures-timer", "dep:jsonschema"]
+
+[dependencies]
+a2ui-derive.workspace = true
+futures-channel = { workspace = true, optional = true }
+futures-timer = { workspace = true, optional = true }
+jsonschema = { workspace = true, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+unicode-ident.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+futures-timer = { workspace = true, features = ["wasm-bindgen"], optional = true }
+wasm-bindgen.workspace = true
+
+[build-dependencies]
+a2ui-codegen.workspace = true
+
+[dev-dependencies]
+futures.workspace = true
+
+[lints]
+workspace = true

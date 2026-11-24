@@ -82,6 +82,15 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/node_modules", "!**/dist", "!**/pkg", "!**/coverage"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/pkg",
+      "!**/coverage",
+      "!**/target",
+      "!**/common_types.json",
+      "!**/catalog.json"
+    ]
   }
 }

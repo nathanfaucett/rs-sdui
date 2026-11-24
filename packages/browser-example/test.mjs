@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { MessageProcessor } from "@a2ui/web_core";
 import { basicCatalog } from "@a2ui/web_core/catalogs/basic/v1";
 
-const workspace = fileURLToPath(new URL("../../../", import.meta.url));
+const workspace = fileURLToPath(new URL("../../", import.meta.url));
 const output = execFileSync("cargo", ["run", "--quiet", "-p", "a2ui-browser-example"], {
   cwd: workspace,
   encoding: "utf8",

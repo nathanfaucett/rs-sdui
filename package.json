@@ -1,0 +1,21 @@
+{
+  "name": "@rs-a2ui/monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.4.1",
+  "scripts": {
+    "dev": "pnpm --filter @rs-a2ui/browser-example run dev",
+    "preview": "pnpm --filter @rs-a2ui/browser-example run preview",
+    "build": "pnpm -r --workspace-concurrency=2 run build",
+    "check": "pnpm -r run check && pnpm run lint",
+    "test": "CI=1 pnpm -r --workspace-concurrency=2 run test",
+    "lint": "biome check --error-on-warnings .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format .",
+    "format:fix": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.6",
+    "typescript": "5.9.3"
+  }
+}

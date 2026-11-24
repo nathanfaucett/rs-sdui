@@ -1,0 +1,30 @@
+{
+  "name": "@rs-a2ui/browser-example",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:wasm": "wasm-pack build --target web --out-dir ../src/pkg --out-name browser rust",
+    "predev": "pnpm --filter @rs-a2ui/web build && pnpm run build:wasm",
+    "dev": "portless a2ui-browser vite dev",
+    "prebuild": "pnpm --filter @rs-a2ui/web build",
+    "build": "pnpm run build:wasm && vite build",
+    "preview": "portless a2ui-browser vite preview",
+    "precheck": "pnpm --filter @rs-a2ui/web build && pnpm run build:wasm",
+    "check": "tsc --noEmit",
+    "format": "biome format --write .",
+    "pretest": "pnpm --filter @rs-a2ui/web build",
+    "test": "node test.mjs && node stream.test.mjs"
+  },
+  "dependencies": {
+    "@a2ui/lit": "0.16.0",
+    "@a2ui/web_core": "0.16.1",
+    "@rs-a2ui/web": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "portless": "^0.15.4",
+    "vite": "^8.2.0",
+    "wasm-pack": "0.13.1"
+  }
+}

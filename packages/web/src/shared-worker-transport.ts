@@ -1,12 +1,15 @@
 import { AgentToRendererMessageSchema } from "@a2ui/web_core/v1_0";
-import { type Connection, createAgentMessageStream, type Transport } from "./transport";
+import { type Connection, createAgentMessageStream, type Transport } from "./transport.js";
 
 export class SharedWorkerTransport implements Transport {
+  private readonly createWorker: () => SharedWorker;
+
+  constructor(createWorker: () => SharedWorker) {
+    this.createWorker = createWorker;
+  }
+
   connect(): Connection {
-    const worker = new SharedWorker(new URL("./application-worker.ts", import.meta.url), {
-      type: "module",
-      name: "a2ui-todo-application",
-    });
+    const worker = this.createWorker();
     const port = worker.port;
     worker.addEventListener("error", (event) => {
       console.error("A2UI shared worker error", event.message, event.filename, event.lineno);

@@ -118,6 +118,7 @@ Do not add a universal Rust `Application` trait just to join these paths. A live
 Completed:
 
 - Official schema and browser SDK revisions are aligned without compatibility transforms.
+- `@rs-a2ui/web` provides renderer-independent async transport and SharedWorker synchronization; the example owns its Lit renderer adapter.
 - `stream.test.mjs` proves progressive Direct JSON delivery through an `AsyncIterable` transport, renderer functions, resolved action context, and scoped updates without an LLM.
 - `a2ui-function` provides offline function validation, typed agent handlers, bidirectional RPC, timeouts, cancellation, and renderer-message dispatch.
 - An application integration test proves that function processing and `Application` actions compose.

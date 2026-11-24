@@ -6,20 +6,28 @@ Write owned Rust state, explicit transitions, and fluent catalog views. Run the 
 
 This workspace is not a full A2UI Core SDK, Agent SDK, or renderer. Official A2UI SDKs perform renderer-side expression evaluation, local input state, function execution, and rendering. The workspace provides offline function-schema validation and bidirectional function RPC, but no inference compiler.
 
-## Crates
+## Rust crates
 
-| Crate              | Purpose                                                                                                                                |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `a2ui-app`         | Owned state machines, declarative view mounting, automatic state data models, action decoding, component diffs, and surface lifecycle. |
-| `a2ui-author`      | Transport-independent A2UI v1.0 messages, components, bindings, actions, and function calls.                                           |
-| `a2ui-codegen`     | `build.rs` generation of typed component builders and function helpers from catalog JSON Schema files.                                 |
-| `a2ui-derive`      | Implementation of the `A2uiPath` derive exported by `a2ui-author`.                                                                     |
-| `a2ui-function`    | Offline catalog function validation, typed agent handlers, renderer-call correlation, timeouts, cancellation, and message dispatch.    |
-| `a2ui-view`        | Declarative element trees, child composition, typed event callbacks, and async effects.                                                |
-| `a2ui-basic`       | Generated helpers for the official v1.0 Basic Catalog. Its catalog file is copied verbatim from `a2ui-project/a2ui`.                   |
-| `examples/browser` | A complete local Rust/WASM application with Vite, TypeScript, and the official `@a2ui/web_core` and `@a2ui/lit` packages.              |
+| Crate           | Purpose                                                                                                                                |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `a2ui-app`      | Owned state machines, declarative view mounting, automatic state data models, action decoding, component diffs, and surface lifecycle. |
+| `a2ui-author`   | Transport-independent A2UI v1.0 messages, components, bindings, actions, and function calls.                                           |
+| `a2ui-codegen`  | `build.rs` generation of typed component builders and function helpers from catalog JSON Schema files.                                 |
+| `a2ui-derive`   | Implementation of the `A2uiPath` derive exported by `a2ui-author`.                                                                     |
+| `a2ui-function` | Offline catalog function validation, typed agent handlers, renderer-call correlation, timeouts, cancellation, and message dispatch.    |
+| `a2ui-view`     | Declarative element trees, child composition, typed event callbacks, and async effects.                                                |
+| `a2ui-basic`    | Generated helpers for the official v1.0 Basic Catalog. Its catalog file is copied verbatim from `a2ui-project/a2ui`.                   |
 
 No third-party Rust A2UI implementation is used.
+
+## TypeScript packages
+
+| Package                    | Purpose                                                                                            |
+| -------------------------- | -------------------------------------------------------------------------------------------------- |
+| `@rs-a2ui/web`             | Renderer-independent async transports and SharedWorker synchronization for standard A2UI messages. |
+| `@rs-a2ui/browser-example` | A complete Rust/WASM todo application with two side-by-side official Lit renderers.                |
+
+All TypeScript, WASM, and npm packages live under `packages/`. The helper does not select a rendering library.
 
 ## Application model
 
@@ -100,7 +108,7 @@ fn load_examples_button() -> Button {
 }
 ```
 
-`load_examples()` uses browser `fetch` on WASM and reads the same bundled JSON on native targets. `with_loaded()` validates the result and returns the next `TodoApp`. See the complete implementations in `examples/browser/rust/src/load.rs` and `examples/browser/rust/src/ui.rs`; this path is covered by native tests and browser validation. An application with a shared API client can capture its `Arc` in the same way, but the library does not prescribe that dependency.
+`load_examples()` uses browser `fetch` on WASM and reads the same bundled JSON on native targets. `with_loaded()` validates the result and returns the next `TodoApp`. See the complete implementations in `packages/browser-example/rust/src/load.rs` and `packages/browser-example/rust/src/ui.rs`; this path is covered by native tests and browser validation. An application with a shared API client can capture its `Arc` in the same way, but the library does not prescribe that dependency.
 
 The callback and future are Rust-only. A2UI JSON contains the standard event, not the I/O operation. `handle()` awaits the effect, validates the next state and view, then commits both. Native effects are `Send`; WASM effects are local. `handle()` does not spawn work or select an executor. Choose Tokio, another executor, a local WASM task, or direct `.await` in the application.
 
@@ -292,7 +300,6 @@ The generator supports A2UI v1.0 only. Complex schema shapes without a small saf
 ## Browser example
 
 ```sh
-cd examples/browser/typescript
 pnpm install
 pnpm run dev
 ```
@@ -301,7 +308,7 @@ The todo page implements add, edit, complete/reopen, delete, filter, clear compl
 
 The entire todo application runs once in a module SharedWorker. One page mounts Renderer A and Renderer B side by side through separate connections and official message processors. The worker serializes actions and effects, broadcasts ordered updates, and sends `snapshot()` to late clients. Changes in either renderer appear in both. The same adapter also works across tabs. Renderer-local edits remain local until an action, as A2UI specifies.
 
-`typescript/src/transport.ts` defines the small application-owned `Transport`/`Connection` seam and shared renderer host. Every connection exposes inbound messages as an `AsyncIterable` and accepts outbound renderer messages through `send()`. `SharedWorkerTransport` and `LocalStreamTransport` implement the same contract. The wire contains standard A2UI messages only. Replace an adapter to use WebSocket, SSE, HTTP, or another transport.
+`packages/web` defines the renderer-independent `Transport`/`Connection` seam and SharedWorker lifecycle helpers. Every connection exposes inbound messages as an `AsyncIterable` and accepts outbound renderer messages through `send()`. `SharedWorkerTransport` and `LocalStreamTransport` implement the same contract. The wire contains standard A2UI messages only. Replace an adapter to use WebSocket, SSE, HTTP, or another transport. The example owns its Lit adapter in `packages/browser-example/src/mount-a2ui.ts`; other applications can use any rendering library.
 
 A reconnection must use a fresh renderer mount and message processor. The new connection sends `Application::snapshot()` before new updates. The official processor rejects `createSurface` for an existing surface ID, so sending a snapshot into the old processor is invalid. Each renderer's **Reconnect** button demonstrates this while the other renderer keeps the worker alive. A transport with durable sequence replay can replay missed updates instead; otherwise, a full snapshot is the recovery mechanism. Do not blindly replay outbound actions because their side effects can already have run. If the application owner also stops, its in-memory state is gone; recovery then requires application-owned persistence.
 
@@ -317,7 +324,7 @@ pnpm run check   # builds WASM and checks TypeScript and Biome
 pnpm run build   # production WASM + Vite build
 ```
 
-The browser uses official `@a2ui/web_core 0.16.1` and `@a2ui/lit 0.16.0` with the matching official v1.0 Basic Catalog. No compatibility transform is applied. Keep the schema and SDK revisions aligned.
+The example uses official `@a2ui/web_core 0.16.1` and `@a2ui/lit 0.16.0` with the matching official v1.0 Basic Catalog. `@rs-a2ui/web` depends only on protocol types and schemas from `web_core`, not Lit or another renderer. No compatibility transform is applied. Keep the schema and SDK revisions aligned.
 
 ## Validation
 

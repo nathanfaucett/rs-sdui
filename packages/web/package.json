@@ -1,0 +1,29 @@
+{
+  "name": "@rs-a2ui/web",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./worker": {
+      "types": "./dist/worker.d.ts",
+      "import": "./dist/worker.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@a2ui/web_core": "0.16.1"
+  },
+  "devDependencies": {
+    "@a2ui/web_core": "0.16.1"
+  },
+  "license": "MIT OR Apache-2.0"
+}

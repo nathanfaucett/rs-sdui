@@ -11,8 +11,7 @@ pub struct LoadedTodo {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn load_examples() -> impl Future<Output = Result<Vec<LoadedTodo>, BoxError>> + Send {
-    let result = serde_json::from_str(include_str!("../../typescript/public/todos.json"))
-        .map_err(Into::into);
+    let result = serde_json::from_str(include_str!("../../public/todos.json")).map_err(Into::into);
     ready(result)
 }
 

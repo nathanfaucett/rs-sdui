@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { MessageProcessor } from "@a2ui/web_core";
 import { basicCatalog } from "@a2ui/web_core/catalogs/basic/v1";
 import { ActionMessageSchema, AgentToRendererMessageSchema } from "@a2ui/web_core/v1_0";
+import { LocalStreamTransport } from "@rs-a2ui/web";
 import {
   BASIC_CATALOG_ID,
   handleStreamAction,
   STREAM_SURFACE_ID,
   streamMessages,
 } from "./src/deterministic-stream.ts";
-import { LocalStreamTransport } from "./src/transport.ts";
 
 const processor = new MessageProcessor([basicCatalog]);
 const process = (message) => {

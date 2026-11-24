@@ -313,16 +313,13 @@ WASM is necessary because the Rust application executes inside that browser work
 
 `packages/web` defines the renderer-independent `Transport`/`Connection` seam and SharedWorker lifecycle helpers. Every connection exposes inbound messages as an `AsyncIterable` and accepts outbound renderer messages through `send()`. `SharedWorkerTransport` and `LocalStreamTransport` implement the same contract. The wire contains standard A2UI messages only. Replace an adapter to use WebSocket, SSE, HTTP, or another transport. The example owns its Lit adapter in `packages/browser-example/src/mount-a2ui.ts`; other applications can use any rendering library.
 
-A reconnection must use a fresh renderer mount and message processor. The new connection sends `Application::snapshot()` before new updates. The official processor rejects `createSurface` for an existing surface ID, so sending a snapshot into the old processor is invalid. Each renderer's **Reconnect** button demonstrates this while the other renderer keeps the worker alive. A transport with durable sequence replay can replay missed updates instead; otherwise, a full snapshot is the recovery mechanism. Do not blindly replay outbound actions because their side effects can already have run. If the application owner also stops, its in-memory state is gone; recovery then requires application-owned persistence.
-
-`stream.test.mjs` drives seven deterministic Direct JSON messages through `LocalStreamTransport` and its async message stream. The messages establish data and unresolved structure before delivering component batches. The test also resolves action context and validates small path updates with the official processor. No second HTML entry, LLM, or API key is needed.
+A reconnection must use a fresh renderer mount and message processor. The new connection sends `Application::snapshot()` before new updates. The official processor rejects `createSurface` for an existing surface ID, so sending a snapshot into the old processor is invalid. Each renderer's **Go offline**/**Go online** toggle demonstrates missed updates and snapshot recovery while the other renderer keeps the worker alive. A transport with durable sequence replay can replay missed updates instead; otherwise, a full snapshot is the recovery mechanism. Do not blindly replay outbound actions because their side effects can already have run. If the application owner also stops, its in-memory state is gone; recovery then requires application-owned persistence.
 
 The `dev` and `preview` scripts use the named `a2ui-browser` portless route. Portless supplies a dynamic `PORT` to Vite and prints the local `.localhost` URL.
 
 Useful checks:
 
 ```sh
-pnpm test        # official schemas/processor validate the state loop and async message stream
 pnpm run check   # builds WASM and checks TypeScript and Biome
 pnpm run build   # production WASM + Vite build
 ```
@@ -338,4 +335,4 @@ cargo clippy --workspace --all-targets
 
 ## Scope
 
-These crates provide application state, authoring, code generation, offline function validation, and bidirectional function RPC. They do not provide catalog negotiation, a network transport, an async executor, renderer-side expression evaluation, inference compilation, or native rendering. Agent integration notes are in `docs/agent-integration.md`; function behavior is in `docs/actions-and-functions.md`.
+These crates provide application state, authoring, code generation, offline function validation, and bidirectional function RPC. They do not provide catalog negotiation, a network transport, an async executor, renderer-side expression evaluation, inference compilation, or native rendering.

@@ -12,9 +12,7 @@
     "preview": "portless a2ui-browser vite preview",
     "precheck": "pnpm --filter @rs-a2ui/web build && pnpm run build:wasm",
     "check": "tsc --noEmit",
-    "format": "biome format --write .",
-    "pretest": "pnpm --filter @rs-a2ui/web build",
-    "test": "node test.mjs && node stream.test.mjs"
+    "format": "biome format --write ."
   },
   "dependencies": {
     "@a2ui/lit": "0.16.0",

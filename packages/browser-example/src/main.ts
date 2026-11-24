@@ -12,16 +12,25 @@ const transport = new SharedWorkerTransport(
 
 for (const id of ["renderer-a", "renderer-b"]) {
   const target = document.getElementById(id);
-  const reconnect = document.getElementById(`reconnect-${id}`);
-  if (!target || !(reconnect instanceof HTMLButtonElement)) {
+  const connectivity = document.getElementById(`connectivity-${id}`);
+  if (!target || !(connectivity instanceof HTMLButtonElement)) {
     throw new Error(`missing ${id} renderer controls`);
   }
 
+  let online = true;
   let connection = mountA2ui(target, "main", transport).connection;
-  reconnect.addEventListener("click", () => {
-    connection.close();
+  connectivity.addEventListener("click", () => {
+    if (online) {
+      connection.close();
+      online = false;
+      connectivity.textContent = "Go online";
+      return;
+    }
+
     target.replaceChildren();
     connection = mountA2ui(target, "main", transport).connection;
+    online = true;
+    connectivity.textContent = "Go offline";
   });
   window.addEventListener("pagehide", () => connection.close(), { once: true });
 }

@@ -2,16 +2,18 @@ import { mountA2ui } from "./mount-a2ui";
 import { SharedWorkerTransport } from "./shared-worker-transport";
 import "./style.css";
 
-const connections = ["renderer-a", "renderer-b"].map((id) => {
+for (const id of ["renderer-a", "renderer-b"]) {
   const target = document.getElementById(id);
-  if (!target) throw new Error(`missing #${id} element`);
-  return mountA2ui(target, "main", new SharedWorkerTransport()).connection;
-});
+  const reconnect = document.getElementById(`reconnect-${id}`);
+  if (!target || !(reconnect instanceof HTMLButtonElement)) {
+    throw new Error(`missing ${id} renderer controls`);
+  }
 
-window.addEventListener(
-  "pagehide",
-  () => {
-    for (const connection of connections) connection.close();
-  },
-  { once: true }
-);
+  let connection = mountA2ui(target, "main", new SharedWorkerTransport()).connection;
+  reconnect.addEventListener("click", () => {
+    connection.close();
+    target.replaceChildren();
+    connection = mountA2ui(target, "main", new SharedWorkerTransport()).connection;
+  });
+  window.addEventListener("pagehide", () => connection.close(), { once: true });
+}

@@ -1,6 +1,6 @@
 use sdui::Application;
-use sdui::basic::v1;
 
+use crate::basic::v1;
 use crate::state::TodoApp;
 
 pub const SURFACE_ID: &str = "main";

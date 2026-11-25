@@ -1,7 +1,7 @@
 use a2ui::{CheckRule, DataModel, DynamicString, Event, FunctionCall};
 use sdui::A2uiData;
-use sdui::basic::v1::{self, Button, ButtonVariant, Column, Text};
 use sdui::{Element, EventExt, SurfaceExt};
+use sdui_browser_example::basic::v1::{self, Button, ButtonVariant, Column, Text};
 use serde::Serialize;
 use serde_json::json;
 

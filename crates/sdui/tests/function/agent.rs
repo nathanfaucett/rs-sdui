@@ -1,4 +1,4 @@
-use crate::support::{BASIC_CATALOG_ID, basic_catalogs, custom_catalogs};
+use crate::support::{CUSTOM_CATALOG_ID, custom_catalogs};
 use a2ui::{CallAgentFunction, FunctionCall, FunctionError, FunctionResult};
 use futures::executor::block_on;
 use sdui::function::AgentFunctions;
@@ -28,24 +28,24 @@ fn agent_message(
 }
 
 #[test]
-fn typed_agent_function_round_trip_uses_the_basic_catalog() {
-    let mut functions = AgentFunctions::new(basic_catalogs());
+fn typed_agent_function_round_trip() {
+    let mut functions = AgentFunctions::new(custom_catalogs());
     functions
         .register(
-            BASIC_CATALOG_ID,
-            "formatString",
+            CUSTOM_CATALOG_ID,
+            "shared",
             |args: FormatArgs, context| async move {
                 assert_eq!(context.surface_id, "surface");
                 assert_eq!(context.function_call_id, "call-1");
-                assert_eq!(context.catalog_id, BASIC_CATALOG_ID);
-                assert_eq!(context.name, "formatString");
+                assert_eq!(context.catalog_id, CUSTOM_CATALOG_ID);
+                assert_eq!(context.name, "shared");
                 Ok::<_, FunctionError>(args.value.replace("${name}", "Ada"))
             },
         )
         .expect("registration");
     let message = agent_message(
-        BASIC_CATALOG_ID,
-        "formatString",
+        CUSTOM_CATALOG_ID,
+        "shared",
         serde_json::Map::from_iter([("value".to_owned(), json!("Hello ${name}"))]),
     );
 
@@ -64,18 +64,18 @@ fn typed_agent_function_round_trip_uses_the_basic_catalog() {
 
 #[test]
 fn invalid_arguments_unknown_functions_and_handler_type_mismatches_are_standard_errors() {
-    let mut functions = AgentFunctions::new(basic_catalogs());
+    let mut functions = AgentFunctions::new(custom_catalogs());
     functions
         .register(
-            BASIC_CATALOG_ID,
-            "formatString",
+            CUSTOM_CATALOG_ID,
+            "shared",
             |args: FormatArgs, _| async move { Ok::<_, FunctionError>(args.value) },
         )
         .expect("registration");
 
     let invalid = block_on(functions.handle(agent_message(
-        BASIC_CATALOG_ID,
-        "formatString",
+        CUSTOM_CATALOG_ID,
+        "shared",
         serde_json::Map::from_iter([("value".to_owned(), json!({"secret": "sensitive-argument"}))]),
     )));
     let FunctionResult::Error(error) = invalid.agent_function_response.result() else {
@@ -85,7 +85,7 @@ fn invalid_arguments_unknown_functions_and_handler_type_mismatches_are_standard_
     assert!(!error.message.contains("sensitive-argument"));
 
     let unknown = block_on(functions.handle(agent_message(
-        BASIC_CATALOG_ID,
+        CUSTOM_CATALOG_ID,
         "missingFunction",
         serde_json::Map::new(),
     )));
@@ -97,17 +97,17 @@ fn invalid_arguments_unknown_functions_and_handler_type_mismatches_are_standard_
 
 #[test]
 fn duplicate_and_unknown_registration_fail() {
-    let mut functions = AgentFunctions::new(basic_catalogs());
+    let mut functions = AgentFunctions::new(custom_catalogs());
     functions
         .register(
-            BASIC_CATALOG_ID,
-            "formatString",
+            CUSTOM_CATALOG_ID,
+            "shared",
             |args: FormatArgs, _| async move { Ok::<_, FunctionError>(args.value) },
         )
         .expect("first registration");
     let duplicate = functions.register(
-        BASIC_CATALOG_ID,
-        "formatString",
+        CUSTOM_CATALOG_ID,
+        "shared",
         |args: FormatArgs, _| async move { Ok::<_, FunctionError>(args.value) },
     );
     assert_eq!(
@@ -115,7 +115,7 @@ fn duplicate_and_unknown_registration_fail() {
         "DUPLICATE"
     );
     let unknown = functions.register(
-        BASIC_CATALOG_ID,
+        CUSTOM_CATALOG_ID,
         "missingFunction",
         |args: FormatArgs, _| async move { Ok::<_, FunctionError>(args.value) },
     );

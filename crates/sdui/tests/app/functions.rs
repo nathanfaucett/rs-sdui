@@ -2,10 +2,11 @@ use a2ui::{Event, RendererToAgentMessage};
 use futures::executor::block_on;
 use sdui::A2uiData;
 use sdui::Application;
-use sdui::basic::v1::{self, Button, Column, Text};
 use sdui::function::{CatalogSet, Dispatch, RendererMessageProcessor};
 use sdui::{Element, EventExt};
 use serde::Serialize;
+
+use crate::support::{CATALOG_ID, button, column, text};
 
 #[derive(A2uiData, Default, Serialize)]
 struct Counter {
@@ -13,23 +14,22 @@ struct Counter {
 }
 
 fn view(_state: &Counter) -> Element {
-    Column::new((
-        Text::new(Counter::paths().count()),
-        Button::new(
-            Text::new("Increment"),
+    column((
+        text(Counter::paths().count()),
+        button(
+            text("Increment"),
             Event::new("increment").on(|state: &Counter, _| Counter {
                 count: state.count + 1,
             }),
         ),
     ))
-    .into()
 }
 
 #[test]
 fn function_processor_forwards_actions_to_the_application() {
     block_on(async {
-        let catalogs = CatalogSet::from_json(include_str!("../../catalog.json"))
-            .expect("the official Basic Catalog must compile offline");
+        let catalogs = CatalogSet::from_json(include_str!("../function/test_catalog.json"))
+            .expect("the test catalog must compile offline");
         let processor = RendererMessageProcessor::new(catalogs);
         let message: RendererToAgentMessage = serde_json::from_value(serde_json::json!({
             "version": "1.0",
@@ -49,7 +49,7 @@ fn function_processor_forwards_actions_to_the_application() {
             panic!("an ordinary action must remain unhandled by function RPC");
         };
 
-        let mut app = Application::new("main", v1::CATALOG_ID, Counter::default(), view);
+        let mut app = Application::new("main", CATALOG_ID, Counter::default(), view);
         app.start().expect("the application must start");
         let updates = app.handle(action).await.expect("the action must succeed");
         assert_eq!(app.state().count, 1);

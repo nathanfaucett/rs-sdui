@@ -1,5 +1,6 @@
 mod actions;
 mod app;
+pub mod basic;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server;
 mod state;

@@ -3,10 +3,7 @@
 //! Rendering, transport, and renderer-side expression evaluation stay outside
 //! this crate. Function validation and RPC are available through `function`.
 
-extern crate self as sdui;
-
 mod app;
-pub mod basic;
 #[cfg(feature = "function")]
 pub mod function;
 mod state;

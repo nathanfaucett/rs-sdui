@@ -28,8 +28,6 @@ unicode-ident.workspace = true
 futures-timer = { workspace = true, features = ["wasm-bindgen"], optional = true }
 wasm-bindgen.workspace = true
 
-[build-dependencies]
-sdui-codegen.workspace = true
 
 [dev-dependencies]
 futures.workspace = true

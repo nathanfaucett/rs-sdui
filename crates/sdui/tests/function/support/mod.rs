@@ -6,15 +6,8 @@
 use a2ui::{CallAgentFunctionMessage, FunctionCall};
 use sdui::function::CatalogSet;
 
-pub const BASIC_CATALOG: &str = include_str!("../../../catalog.json");
 pub const CUSTOM_CATALOG: &str = include_str!("../test_catalog.json");
-pub const BASIC_CATALOG_ID: &str =
-    "https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json";
 pub const CUSTOM_CATALOG_ID: &str = "test:functions";
-
-pub fn basic_catalogs() -> CatalogSet {
-    CatalogSet::from_json(BASIC_CATALOG).expect("basic catalog")
-}
 
 pub fn custom_catalogs() -> CatalogSet {
     CatalogSet::from_json(CUSTOM_CATALOG).expect("custom catalog")

@@ -8,14 +8,16 @@ This workspace is not a full A2UI Core SDK, Agent SDK, or renderer. Official A2U
 
 ## Rust crates
 
-| Crate          | Purpose                                                                                                                                                                  |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `a2ui`         | Standard A2UI v1.0 component, dynamic-value, and message types.                                                                                                          |
-| `sdui`         | Owned state machines, typed state bindings, declarative views, generated Basic Catalog helpers, and browser lifecycle exports. Enable `function` for validation and RPC. |
-| `sdui-codegen` | `build.rs` generation of typed component builders and function helpers from catalog JSON Schema files.                                                                   |
-| `sdui-derive`  | Proc-macro implementation of the `A2uiData` derive exported by `sdui`.                                                                                                   |
+| Crate          | Purpose                                                                                                                                 |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `a2ui`         | Standard A2UI v1.0 component, dynamic-value, and message types.                                                                         |
+| `sdui`         | Owned state machines, typed state bindings, declarative views, and browser lifecycle exports. Enable `function` for validation and RPC. |
+| `sdui-codegen` | `build.rs` generation of typed component builders and function helpers from catalog JSON Schema files.                                  |
+| `sdui-derive`  | Proc-macro implementation of the `A2uiData` derive exported by `sdui`.                                                                  |
 
 Use `a2ui` alone for wire-level protocol code. `sdui` depends on `a2ui` but does not re-export its types. No third-party Rust A2UI implementation is used.
+
+`sdui` does not include a component catalog. Applications own their catalog schemas and generate typed builders with `sdui-codegen`. The examples below use an application-owned `generated::basic` module.
 
 ## TypeScript packages
 
@@ -37,7 +39,7 @@ Standard events and their state transitions are declared together in the view. N
 
 ```rust
 use a2ui::{ActionMessage, DataBinding, Event};
-use sdui::basic::v1::{self, Button, Column, Text};
+use crate::generated::basic::{self, Button, Column, Text};
 use sdui::{A2uiData, Application, Element, EventExt};
 use serde::Serialize;
 
@@ -66,7 +68,7 @@ fn counter_view(_state: &Counter) -> Element {
 
 let mut app = Application::new(
     "counter",
-    v1::CATALOG_ID,
+    basic::CATALOG_ID,
     Counter::default(),
     counter_view,
 );
@@ -179,17 +181,17 @@ Generated function builders have typed required arguments, typed fluent optional
 
 ```rust
 use a2ui::CheckRule;
-use sdui::basic::v1::{self, Button, Text};
+use crate::generated::basic::{self, Button, Text};
 
 let price = Text::new(
-    v1::functions::format_currency("USD", Booking::paths().price())
+    basic::functions::format_currency("USD", Booking::paths().price())
         .decimals(2)
         .grouping(true),
 );
-let required = CheckRule::new(v1::functions::required(Booking::paths().price()));
+let required = CheckRule::new(basic::functions::required(Booking::paths().price()));
 let help = Button::new(
     Text::new("Documentation"),
-    v1::functions::open_url("https://a2ui.org/"),
+    basic::functions::open_url("https://a2ui.org/"),
 );
 ```
 
@@ -221,7 +223,7 @@ match processor.process(renderer_message).await {
 
 ```rust
 use a2ui::Event;
-use sdui::basic::v1::{self, Button, Column, Text};
+use crate::generated::basic::{self, Button, Column, Text};
 use sdui::{A2uiData, SurfaceExt};
 use serde::Serialize;
 
@@ -235,7 +237,7 @@ struct State {
     form: Form,
 }
 
-let message = v1::surface("main").root(Column::new((
+let message = basic::surface("main").root(Column::new((
     Text::new("A2UI from Rust"),
     Button::new(
         Text::new("Submit"),

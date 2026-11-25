@@ -6,11 +6,12 @@ use futures::{
     io::{AsyncReadExt, Cursor},
 };
 use sdui::A2uiData;
-use sdui::basic::v1::{self, Button, Column, Text};
 use sdui::{Application, ApplicationError};
 use sdui::{Effect, Element, EventExt};
 use serde::Serialize;
 use serde_json::{Map, json};
+
+use crate::support::{CATALOG_ID, button, column, text};
 
 #[derive(A2uiData, Clone, Debug, Default, Serialize)]
 struct Counter {
@@ -19,28 +20,27 @@ struct Counter {
 
 /// A reusable component: typed props in, a declarative view out.
 fn counter_label() -> impl Into<Element> + 'static {
-    Text::new(Counter::paths().count())
+    text(Counter::paths().count())
 }
 
 fn counter_view(_state: &Counter) -> Element {
-    Column::new((
+    column((
         counter_label(),
-        Button::new(
-            Text::new("Increment"),
+        button(
+            text("Increment"),
             Event::new("increment").on(|state: &Counter, _| Counter {
                 count: state.count + 1,
             }),
         ),
-        Button::new(
-            Text::new("Noop"),
+        button(
+            text("Noop"),
             Event::new("noop").on(|state: &Counter, _| Counter { count: state.count }),
         ),
     ))
-    .into()
 }
 
 fn counter() -> Application<Counter> {
-    Application::new("main", v1::CATALOG_ID, Counter::default(), counter_view)
+    Application::new("main", CATALOG_ID, Counter::default(), counter_view)
 }
 
 #[test]
@@ -52,7 +52,7 @@ fn complete_tree_serializes_as_standard_a2ui_json() {
             "version": "1.0",
             "createSurface": {
                 "surfaceId": "main",
-                "catalogId": v1::CATALOG_ID,
+                "catalogId": CATALOG_ID,
                 "components": [
                     {
                         "id": "root",
@@ -93,7 +93,7 @@ fn snapshot_at_start_equals_start_message() {
 }
 
 #[test]
-fn basic_catalog_components_render_state_and_actions() {
+fn components_render_state_and_actions() {
     block_on(async {
         let mut app = counter();
         assert!(matches!(
@@ -143,14 +143,14 @@ fn basic_catalog_components_render_state_and_actions() {
 #[test]
 fn event_names_are_scoped_by_surface_and_source_component() {
     block_on(async {
-        let mut app = Application::new("main", v1::CATALOG_ID, Counter::default(), |_| {
-            Column::new((
-                Button::new(
-                    Text::new("First"),
+        let mut app = Application::new("main", CATALOG_ID, Counter::default(), |_| {
+            column((
+                button(
+                    text("First"),
                     Event::new("select").on(|_: &Counter, _| Counter { count: 1 }),
                 ),
-                Button::new(
-                    Text::new("Second"),
+                button(
+                    text("Second"),
                     Event::new("select").on(|_: &Counter, _| Counter { count: 2 }),
                 ),
             ))
@@ -192,16 +192,16 @@ struct Detail {
 fn detail() -> Application<Detail> {
     Application::new(
         "main",
-        v1::CATALOG_ID,
+        CATALOG_ID,
         Detail { show_detail: true },
         |state: &Detail| {
-            let children = once(Text::new("1"))
-                .chain(state.show_detail.then(|| Text::new("Detail")))
+            let children = once(text("1"))
+                .chain(state.show_detail.then(|| text("Detail")))
                 .collect::<Vec<_>>();
-            Column::new((
-                Column::new(children),
-                Button::new(
-                    Text::new("Hide detail"),
+            column((
+                column(children),
+                button(
+                    text("Hide detail"),
                     Event::new("hide").on(|_: &Detail, _| Detail { show_detail: false }),
                 ),
             ))
@@ -265,14 +265,14 @@ fn async_effects_apply_io_results_to_state() {
         let input = Cursor::new(b"42".to_vec());
         let mut app = Application::new(
             "main",
-            v1::CATALOG_ID,
+            CATALOG_ID,
             Counter::default(),
             move |_state: &Counter| {
                 let input = input.clone();
-                Column::new((
+                column((
                     counter_label(),
-                    Button::new(
-                        Text::new("Load"),
+                    button(
+                        text("Load"),
                         Event::new("load").on_effect(move |_, _| {
                             let mut input = input.clone();
                             Effect::new(async move {

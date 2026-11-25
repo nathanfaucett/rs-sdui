@@ -1,16 +1,17 @@
-use crate::support::{BASIC_CATALOG, CUSTOM_CATALOG, basic_catalogs, custom_catalogs};
+use crate::support::{CUSTOM_CATALOG, custom_catalogs};
 use sdui::function::{Catalog, CatalogSet, ReturnType};
 use serde_json::json;
 
 #[test]
 fn parses_multiple_catalogs_and_rejects_duplicate_ids() {
-    let basic = Catalog::from_json(BASIC_CATALOG).expect("basic catalog");
     let custom = Catalog::from_json(CUSTOM_CATALOG).expect("custom catalog");
-    let set = CatalogSet::new([basic.clone(), custom]).expect("catalog set");
+    let other_json = CUSTOM_CATALOG.replace("test:functions", "test:other");
+    let other = Catalog::from_json(&other_json).expect("other catalog");
+    let set = CatalogSet::new([custom.clone(), other]).expect("catalog set");
     assert_eq!(set.len(), 2);
-    assert!(set.get(basic.id()).is_some());
+    assert!(set.get(custom.id()).is_some());
 
-    let duplicate = CatalogSet::new([basic.clone(), basic]);
+    let duplicate = CatalogSet::new([custom.clone(), custom]);
     assert_eq!(
         duplicate.expect_err("duplicate IDs must fail").code,
         "INVALID_CATALOG"
@@ -32,7 +33,6 @@ fn all_declared_return_shapes_are_checked() {
 }
 
 #[test]
-fn real_and_custom_catalogs_compile_offline() {
-    assert_eq!(basic_catalogs().len(), 1);
+fn custom_catalog_compiles_offline() {
     assert_eq!(custom_catalogs().len(), 1);
 }

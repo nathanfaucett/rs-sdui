@@ -9,34 +9,18 @@ mod app;
 pub mod basic;
 #[cfg(feature = "function")]
 pub mod function;
-mod protocol;
+mod state;
 mod view;
 #[cfg(target_arch = "wasm32")]
 mod wasm;
 
 pub use app::{application::Application, error::ApplicationError};
-pub use protocol::{
-    component::{CheckRule, ChildList, ChildTemplate, Component, Condition},
-    dynamic::{
-        Action, DataBinding, DynamicBoolean, DynamicNumber, DynamicString, DynamicStringList,
-        DynamicValue, Event, FunctionCall, number,
-    },
-    message::{
-        ActionEvent, ActionMessage, AgentFunctionResponseMessage, AgentToRendererMessage,
-        CallAgentFunction, CallAgentFunctionMessage, CallRendererFunction,
-        CallRendererFunctionMessage, CreateSurface, CreateSurfaceMessage, DataModel, DeleteSurface,
-        DeleteSurfaceMessage, ErrorMessage, FunctionError, FunctionResponse, FunctionResult,
-        GenericError, Metadata, ProtocolVersion, RendererError, RendererFunctionResponseMessage,
-        RendererToAgentMessage, UpdateComponents, UpdateComponentsMessage, UpdateDataModel,
-        UpdateDataModelMessage, ValidationError, ValidationErrorCode,
-    },
-    state::{A2uiData, CollectionPath, StatePath},
-};
 pub use sdui_derive::A2uiData;
+pub use state::{A2uiData, CollectionPath, StatePath};
 pub use view::{
     action::{ActionResult, BoxError, IntoActionResult},
     effect::Effect,
-    element::{Children, Element, IntoChildren},
+    element::{Children, Element, IntoChildren, SurfaceExt},
     event::{EventExt, EventHandler, ViewAction},
     platform::{MaybeSend, MaybeSync},
 };

@@ -6,7 +6,7 @@
 
 use serde_json::Value;
 
-use crate::{Action, ChildList, ChildTemplate, Component};
+use a2ui::{Action, ChildList, ChildTemplate, Component, CreateSurface};
 
 use crate::{EventHandler, ViewAction};
 
@@ -108,6 +108,17 @@ impl Element {
         };
         flatten(self, "root", &mut parts);
         parts
+    }
+}
+
+/// Adds SDUI declarative roots to an A2UI surface.
+pub trait SurfaceExt {
+    fn root(self, root: impl Into<Element>) -> CreateSurface;
+}
+
+impl SurfaceExt for CreateSurface {
+    fn root(self, root: impl Into<Element>) -> Self {
+        self.components(root.into().into_components())
     }
 }
 

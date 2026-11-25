@@ -1,4 +1,4 @@
-use crate::FunctionError;
+use a2ui::FunctionError;
 
 pub const CANCELLED: &str = "CANCELLED";
 pub const DISPOSED: &str = "DISPOSED";

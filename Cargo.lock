@@ -3,6 +3,14 @@
 version = 4
 
 [[package]]
+name = "a2ui"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -752,6 +760,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 name = "sdui"
 version = "0.1.0"
 dependencies = [
+ "a2ui",
  "futures",
  "futures-channel",
  "futures-timer",
@@ -768,9 +777,9 @@ dependencies = [
 name = "sdui-browser-example"
 version = "0.1.0"
 dependencies = [
+ "a2ui",
  "form_urlencoded",
  "futures",
- "js-sys",
  "sdui",
  "serde",
  "serde_json",
@@ -778,7 +787,6 @@ dependencies = [
  "tokio-tungstenite",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "web-sys",
 ]
 
 [[package]]
@@ -1104,16 +1112,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ef64dbcc55df09c7e5a46182d181c2cfa3e925f3da937ea764728b4bbb9dcbf"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "web-sys"
-version = "0.3.104"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c435338968042f4f59a557f690a253676d47ce13ceb55d70100e7facf6620a30"
-dependencies = [
- "js-sys",
- "wasm-bindgen",
 ]
 
 [[package]]

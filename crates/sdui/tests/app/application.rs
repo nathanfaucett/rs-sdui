@@ -1,11 +1,12 @@
 use std::iter::once;
 
+use a2ui::{ActionEvent, ActionMessage, AgentToRendererMessage, Event, ProtocolVersion};
 use futures::{
     executor::block_on,
     io::{AsyncReadExt, Cursor},
 };
+use sdui::A2uiData;
 use sdui::basic::v1::{self, Button, Column, Text};
-use sdui::{A2uiData, ActionEvent, ActionMessage, AgentToRendererMessage, Event, ProtocolVersion};
 use sdui::{Application, ApplicationError};
 use sdui::{Effect, Element, EventExt};
 use serde::Serialize;

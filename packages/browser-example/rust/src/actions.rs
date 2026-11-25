@@ -1,11 +1,8 @@
-use sdui::ActionEvent;
+use a2ui::ActionEvent;
 use sdui::{ActionResult, BoxError};
 use serde_json::Value;
 
-use crate::{
-    load::LoadedTodo,
-    state::{Filter, Todo, TodoApp},
-};
+use crate::state::{Filter, Todo, TodoApp};
 
 impl TodoApp {
     /// Adds a trimmed title and advances the next ID.
@@ -27,33 +24,6 @@ impl TodoApp {
         });
         next.next_id = next_id;
         next.draft.clear();
-        Ok(next)
-    }
-
-    /// Appends validated example tasks and shows the full list.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error for an empty loaded title or an exhausted ID space.
-    pub fn with_loaded(&self, examples: Vec<LoadedTodo>) -> ActionResult<Self> {
-        let mut next = self.clone();
-        for example in examples {
-            let title = example.title.trim();
-            if title.is_empty() {
-                return Err("loaded tasks need non-empty titles".into());
-            }
-            let id = next.next_id;
-            next.next_id = next
-                .next_id
-                .checked_add(1)
-                .ok_or("todo ID space exhausted")?;
-            next.todos.push(Todo {
-                id,
-                title: title.to_owned(),
-                completed: example.completed,
-            });
-        }
-        next.filter = Filter::All;
         Ok(next)
     }
 

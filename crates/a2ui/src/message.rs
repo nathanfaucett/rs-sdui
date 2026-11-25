@@ -92,12 +92,6 @@ impl CreateSurface {
         self
     }
 
-    /// Builds the standard flat component list from one declarative root element.
-    pub fn root(mut self, root: impl Into<crate::Element>) -> Self {
-        self.components = Some(root.into().into_components());
-        self
-    }
-
     pub fn data_model(mut self, data_model: impl Into<DataModel>) -> Self {
         self.data_model = Some(data_model.into());
         self

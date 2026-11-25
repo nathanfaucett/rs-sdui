@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{Component, CreateSurface};
+use a2ui::{Component, CreateSurface};
 
 use crate::ApplicationError;
 

@@ -8,13 +8,14 @@ This workspace is not a full A2UI Core SDK, Agent SDK, or renderer. Official A2U
 
 ## Rust crates
 
-| Crate          | Purpose                                                                                                                                                            |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `sdui`         | Protocol types, owned state machines, declarative views, generated Basic Catalog helpers, and browser lifecycle exports. Enable `function` for validation and RPC. |
-| `sdui-codegen` | `build.rs` generation of typed component builders and function helpers from catalog JSON Schema files.                                                             |
-| `sdui-derive`  | Proc-macro implementation of the `A2uiData` derive exported by `sdui`.                                                                                             |
+| Crate          | Purpose                                                                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `a2ui`         | Standard A2UI v1.0 component, dynamic-value, and message types.                                                                                                          |
+| `sdui`         | Owned state machines, typed state bindings, declarative views, generated Basic Catalog helpers, and browser lifecycle exports. Enable `function` for validation and RPC. |
+| `sdui-codegen` | `build.rs` generation of typed component builders and function helpers from catalog JSON Schema files.                                                                   |
+| `sdui-derive`  | Proc-macro implementation of the `A2uiData` derive exported by `sdui`.                                                                                                   |
 
-No third-party Rust A2UI implementation is used.
+Use `a2ui` alone for wire-level protocol code. `sdui` depends on `a2ui` but does not re-export its types. No third-party Rust A2UI implementation is used.
 
 ## TypeScript packages
 
@@ -35,8 +36,9 @@ The interface follows two useful Rust UI patterns:
 Standard events and their state transitions are declared together in the view. No application trait, message enum, reducer, action registry, or action-conversion impl is required.
 
 ```rust
+use a2ui::{ActionMessage, DataBinding, Event};
 use sdui::basic::v1::{self, Button, Column, Text};
-use sdui::{A2uiData, ActionMessage, Application, DataBinding, Element, Event, EventExt};
+use sdui::{A2uiData, Application, Element, EventExt};
 use serde::Serialize;
 
 #[derive(A2uiData, Clone, Default, Serialize)]
@@ -85,24 +87,7 @@ Component functions can return a concrete generated type, `impl Into<Element>`, 
 
 Handlers are scoped by the standard `surfaceId`, `sourceComponentId`, and event name. Different components can reuse the same event name; the runtime does not rewrite or manually namespace it. An action with the right name but the wrong source component is rejected. For list actions, put a stable item ID in `Event::context` instead of encoding it in the event name. This keeps stale actions from affecting another row after the list changes.
 
-Use `.on_effect(...)` to declare an event that performs I/O and returns the next state. The workspace does not provide an HTTP client or a `Client` type; those belong to the application. This is the browser example's actual effect:
-
-```rust,ignore
-fn load_examples_button() -> Button {
-    Button::new(
-        Text::new("Load example tasks"),
-        Event::new("load_examples").on_effect(|state: &TodoApp, _| {
-            let state = state.clone();
-            Effect::new(async move {
-                let examples = load_examples().await?;
-                state.with_loaded(examples)
-            })
-        }),
-    )
-}
-```
-
-`load_examples()` uses browser `fetch` on WASM and reads the same bundled JSON on native targets. `with_loaded()` validates the result and returns the next `TodoApp`. See the complete implementations in `packages/browser-example/rust/src/load.rs` and `packages/browser-example/rust/src/ui.rs`; this path is covered by native tests and browser validation. An application with a shared API client can capture its `Arc` in the same way, but the library does not prescribe that dependency.
+Use `.on_effect(...)` to declare an event that performs I/O and returns the next state. The workspace does not provide an HTTP client or a `Client` type; those belong to the application. Capture an application-owned client or its `Arc` in the effect callback.
 
 The callback and future are Rust-only. A2UI JSON contains the standard event, not the I/O operation. `handle()` awaits the effect, validates the next state and view, then commits both. Native effects are `Send`; WASM effects are local. `handle()` does not spawn work or select an executor. Choose Tokio, another executor, a local WASM task, or direct `.await` in the application.
 
@@ -193,7 +178,7 @@ One `Application` owns one fixed surface ID and catalog. Use separate instances 
 Generated function builders have typed required arguments, typed fluent optional arguments, and conversions based on `returnType`, `allowedCallers`, and `requiresUserActivation`:
 
 ```rust
-use sdui::CheckRule;
+use a2ui::CheckRule;
 use sdui::basic::v1::{self, Button, Text};
 
 let price = Text::new(
@@ -225,7 +210,7 @@ processor.agent_functions_mut().register(
 
 match processor.process(renderer_message).await {
     sdui::function::Dispatch::Handled(messages) => send(messages),
-    sdui::function::Dispatch::Unhandled(sdui::RendererToAgentMessage::Action(action)) => {
+    sdui::function::Dispatch::Unhandled(a2ui::RendererToAgentMessage::Action(action)) => {
         send(app.handle(action).await?);
     }
     sdui::function::Dispatch::Unhandled(message) => handle_other(message),
@@ -235,8 +220,9 @@ match processor.process(renderer_message).await {
 ## Author a surface without the runtime
 
 ```rust
+use a2ui::Event;
 use sdui::basic::v1::{self, Button, Column, Text};
-use sdui::{A2uiData, Event};
+use sdui::{A2uiData, SurfaceExt};
 use serde::Serialize;
 
 #[derive(A2uiData, Serialize)]
@@ -264,7 +250,7 @@ The result is a standard `createSurface` message with `version: "1.0"`.
 
 ## Generate helpers for your catalogs
 
-Add `sdui` and `serde_json` as dependencies, and `sdui-codegen` as a build dependency.
+Add `a2ui`, `sdui`, and `serde_json` as dependencies, and `sdui-codegen` as a build dependency. Generated code refers directly to both `a2ui` and `sdui`.
 
 ```rust
 // build.rs
@@ -298,9 +284,9 @@ pnpm install
 pnpm run dev
 ```
 
-The todo page implements add, edit, complete/reopen, delete, filter, clear completed, and async example loading. It uses renderer `formatString`, `openUrl`, and `@checks` for reactive text, local navigation, and immediate whitespace-title validation. Rust still validates all submitted titles.
+The todo page implements add, edit, complete/reopen, delete, filter, and clear completed. It uses renderer `formatString`, `openUrl`, and `@checks` for reactive text, local navigation, and immediate whitespace-title validation. Rust still validates all submitted titles.
 
-The page starts with two configurable application instances. **Add instance** creates more. Each instance selects a WASM SharedWorker or the native Rust WebSocket server and a session ID. Instances with the same backend and session ID share one runtime; a different ID creates independent state. Both backends serialize actions and effects, broadcast ordered updates, and send `snapshot()` to late clients. Renderer-local edits remain local until an action, as A2UI specifies.
+The page starts with two configurable application instances. **Add instance** creates more. Each instance selects a WASM SharedWorker or the native Rust WebSocket server and a session ID. Instances with the same backend and session ID share one runtime; a different ID creates independent state. Both backends serialize actions, broadcast ordered updates, and send `snapshot()` to late clients. Renderer-local edits remain local until an action, as A2UI specifies.
 
 WASM is necessary because the Rust application executes inside that browser worker. `sdui` owns the reusable FFI on WASM targets; the example declares only `sdui::export_application!(crate::application, crate::TodoApp)`. `@sdui/web` owns worker synchronization. A server-hosted Rust application does not use the browser binding.
 

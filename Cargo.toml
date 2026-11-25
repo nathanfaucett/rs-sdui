@@ -11,6 +11,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/nathanfaucett/rs-sdui"
 
 [workspace.dependencies]
+a2ui = { path = "crates/a2ui" }
 sdui = { path = "crates/sdui" }
 sdui-codegen = { path = "crates/sdui-codegen" }
 sdui-derive = { path = "crates/sdui-derive" }
@@ -18,7 +19,6 @@ futures = { version = "0.3", default-features = false, features = ["executor"] }
 futures-channel = { version = "0.3", default-features = false, features = ["alloc"] }
 futures-timer = "3"
 form_urlencoded = "1"
-js-sys = "0.3"
 jsonschema = { version = "=0.63.1", default-features = false }
 prettyplease = "0.2"
 proc-macro2 = "1"
@@ -31,7 +31,6 @@ tokio-tungstenite = "0.28"
 unicode-ident = "1"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-web-sys = "0.3"
 
 [workspace.lints.rust]
 ambiguous_negative_literals = "warn"

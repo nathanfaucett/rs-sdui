@@ -1,6 +1,7 @@
 use std::{cell::RefCell, fmt::Display, rc::Rc};
 
-use crate::{ActionMessage, Application, RendererToAgentMessage};
+use crate::Application;
+use a2ui::{ActionMessage, RendererToAgentMessage};
 use serde::Serialize;
 use wasm_bindgen::JsValue;
 

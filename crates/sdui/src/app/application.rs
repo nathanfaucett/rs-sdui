@@ -1,11 +1,11 @@
 use std::{collections::BTreeMap, fmt};
 
 use crate::view::action::Handler;
-use crate::{
+use crate::{Element, MaybeSend, MaybeSync};
+use a2ui::{
     ActionMessage, AgentToRendererMessage, CreateSurface, DataModel, DeleteSurface,
     UpdateComponents, UpdateDataModel,
 };
-use crate::{Element, MaybeSend, MaybeSync};
 use serde::Serialize;
 
 use crate::ApplicationError;

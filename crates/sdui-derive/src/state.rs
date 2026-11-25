@@ -34,10 +34,10 @@ fn leaf(ident: &syn::Ident) -> TokenStream {
     quote! {
         #[automatically_derived]
         impl ::sdui::A2uiData for #ident {
-            type Path = ::sdui::DataBinding;
+            type Path = ::a2ui::DataBinding;
 
             fn from_path(path: ::sdui::StatePath) -> Self::Path {
-                ::sdui::DataBinding::new(path.into_string())
+                ::a2ui::DataBinding::new(path.into_string())
             }
         }
     }

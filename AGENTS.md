@@ -28,6 +28,10 @@ After Vite, worker, transport, or bundle changes, also validate the production b
 
 After `cargo update`, inspect Clippy output carefully for duplicate dependency versions. Follow the dependency rules in `CODING_STANDARDS.md`.
 
+## Pre-Release
+
+No backwards compatibility, no legacy code, no versions.
+
 ## Final review
 
 Read `CODING_STANDARDS.md` before reviewing the diff. Report the validation actually run and any remaining warnings or risks.

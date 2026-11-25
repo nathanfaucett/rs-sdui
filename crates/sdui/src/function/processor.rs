@@ -4,7 +4,7 @@
     reason = "simple processor constructors and accessors"
 )]
 
-use crate::{AgentToRendererMessage, RendererToAgentMessage};
+use a2ui::{AgentToRendererMessage, RendererToAgentMessage};
 
 use crate::function::{AgentFunctions, CatalogSet, RendererFunctionCalls};
 

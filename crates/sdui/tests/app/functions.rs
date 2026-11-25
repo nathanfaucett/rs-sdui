@@ -1,8 +1,9 @@
+use a2ui::{Event, RendererToAgentMessage};
 use futures::executor::block_on;
+use sdui::A2uiData;
 use sdui::Application;
 use sdui::basic::v1::{self, Button, Column, Text};
 use sdui::function::{CatalogSet, Dispatch, RendererMessageProcessor};
-use sdui::{A2uiData, Event, RendererToAgentMessage};
 use sdui::{Element, EventExt};
 use serde::Serialize;
 

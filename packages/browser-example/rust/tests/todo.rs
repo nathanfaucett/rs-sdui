@@ -1,5 +1,5 @@
+use a2ui::{ActionEvent, ActionMessage, AgentToRendererMessage, ProtocolVersion};
 use futures::executor::block_on;
-use sdui::{ActionEvent, ActionMessage, AgentToRendererMessage, ProtocolVersion};
 use sdui_browser_example::{Filter, SURFACE_ID, TodoApp, application};
 use serde_json::{Map, Value, json};
 
@@ -72,32 +72,6 @@ fn add_edit_toggle_and_delete_form_a_complete_state_loop() {
             .await
             .expect_err("a stale row action must not affect the remaining row");
         assert!(!app.state().todos[0].completed);
-    });
-}
-
-#[test]
-fn async_effects_load_example_tasks() {
-    block_on(async {
-        let mut app = application();
-        app.start().expect("initial view must be valid");
-
-        let updates = app
-            .handle(action("root_4_1", "load_examples", json!({})))
-            .await
-            .expect("async loading must succeed");
-        assert_eq!(app.state().todos.len(), 3);
-        assert_eq!(app.state().next_id, 4);
-        assert_eq!(app.state().todos[0].title, "Read the A2UI specification");
-        assert!(app.state().todos[0].completed);
-        assert_eq!(app.state().todos[2].title, "Connect an asynchronous action");
-        assert!(updates.iter().any(|message| matches!(
-            message,
-            AgentToRendererMessage::UpdateDataModel(message)
-                if message.update_data_model.path.as_deref() == Some("/todos")
-        )));
-        app.handle(action("root_4_1", "load_examples", json!({})))
-            .await
-            .expect_err("the one-shot effect must leave with the empty state");
     });
 }
 

@@ -15,6 +15,7 @@ default = []
 function = ["dep:futures-channel", "dep:futures-timer", "dep:jsonschema"]
 
 [dependencies]
+a2ui.workspace = true
 sdui-derive.workspace = true
 futures-channel = { workspace = true, optional = true }
 futures-timer = { workspace = true, optional = true }

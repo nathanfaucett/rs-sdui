@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use serde_json::{Number, Value};
 
-use crate::DataBinding;
+use a2ui::DataBinding;
 
 /// A type that can produce a typed path into its serialized JSON value.
 ///

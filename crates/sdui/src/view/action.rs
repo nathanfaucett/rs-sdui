@@ -1,6 +1,6 @@
 use std::{error::Error, fmt, pin::Pin};
 
-use crate::ActionEvent;
+use a2ui::ActionEvent;
 
 use crate::{Effect, MaybeSend, MaybeSync};
 

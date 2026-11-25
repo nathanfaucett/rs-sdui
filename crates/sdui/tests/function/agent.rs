@@ -1,7 +1,7 @@
 use crate::support::{BASIC_CATALOG_ID, basic_catalogs, custom_catalogs};
+use a2ui::{CallAgentFunction, FunctionCall, FunctionError, FunctionResult};
 use futures::executor::block_on;
 use sdui::function::AgentFunctions;
-use sdui::{CallAgentFunction, FunctionCall, FunctionError, FunctionResult};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -14,14 +14,14 @@ fn agent_message(
     catalog_id: &str,
     name: &str,
     args: serde_json::Map<String, Value>,
-) -> sdui::CallAgentFunctionMessage {
+) -> a2ui::CallAgentFunctionMessage {
     let call = FunctionCall {
         name: name.to_owned(),
         catalog_id: Some(catalog_id.to_owned()),
         args,
     };
-    sdui::CallAgentFunctionMessage {
-        version: sdui::ProtocolVersion::V1_0,
+    a2ui::CallAgentFunctionMessage {
+        version: a2ui::ProtocolVersion::V1_0,
         call_agent_function: CallAgentFunction::new("surface", "call-1", call)
             .expect("explicit catalog ID"),
     }

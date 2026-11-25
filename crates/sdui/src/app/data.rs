@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{CreateSurface, UpdateDataModel};
+use a2ui::{CreateSurface, UpdateDataModel};
 use serde_json::Value;
 
 pub fn updates(previous: &CreateSurface, next: &CreateSurface) -> Vec<UpdateDataModel> {
@@ -127,7 +127,7 @@ fn collect_value_bindings(value: &Value, paths: &mut BTreeSet<String>) {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Component, DataBinding, DataModel};
+    use a2ui::{Component, DataBinding, DataModel};
     use serde_json::json;
 
     use super::*;

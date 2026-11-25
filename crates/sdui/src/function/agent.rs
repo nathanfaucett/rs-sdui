@@ -12,7 +12,7 @@ use std::rc::Rc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 
-use crate::{
+use a2ui::{
     AgentFunctionResponseMessage, CallAgentFunctionMessage, FunctionError, FunctionResponse,
     ProtocolVersion,
 };

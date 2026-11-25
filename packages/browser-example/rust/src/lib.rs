@@ -1,6 +1,5 @@
 mod actions;
 mod app;
-mod load;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server;
 mod state;

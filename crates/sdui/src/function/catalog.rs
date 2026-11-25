@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use crate::{FunctionCall, FunctionError};
+use a2ui::{FunctionCall, FunctionError};
 use jsonschema::{Registry, Resource, Validator};
 use serde_json::{Value, json};
 

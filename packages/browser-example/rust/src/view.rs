@@ -1,14 +1,11 @@
+use a2ui::{CheckRule, Event};
 use sdui::basic::v1::{
     self, Button, ButtonVariant, Card, Column, Row, Text, TextField, TextVariant,
 };
-use sdui::{CheckRule, Event};
-use sdui::{Effect, Element, EventExt};
+use sdui::{Element, EventExt};
 use serde_json::{Value, json};
 
-use crate::{
-    load::load_examples,
-    state::{Filter, Todo, TodoApp},
-};
+use crate::state::{Filter, Todo, TodoApp};
 
 impl TodoApp {
     #[must_use]
@@ -55,16 +52,11 @@ impl TodoApp {
             .collect::<Vec<_>>();
         if items.is_empty() {
             let message = match self.filter {
-                Filter::All => "No tasks yet. Add one above or load the examples.",
+                Filter::All => "No tasks yet. Add one above.",
                 Filter::Active => "No active tasks.",
                 Filter::Completed => "No completed tasks.",
             };
-            let empty = Text::new(message).variant(TextVariant::Caption);
-            if self.todos.is_empty() && self.filter == Filter::All {
-                Column::new((empty, load_examples_button())).into()
-            } else {
-                empty.into()
-            }
+            Text::new(message).variant(TextVariant::Caption).into()
         } else {
             Column::new(items).into()
         }
@@ -108,19 +100,6 @@ fn composer() -> Row {
         .variant(ButtonVariant::Primary)
         .checks([title_rule]),
     ))
-}
-
-fn load_examples_button() -> Button {
-    Button::new(
-        Text::new("Load example tasks"),
-        Event::new("load_examples").on_effect(|state: &TodoApp, _| {
-            let state = state.clone();
-            Effect::new(async move {
-                let examples = load_examples().await?;
-                state.with_loaded(examples)
-            })
-        }),
-    )
 }
 
 fn todo_card(index: usize, todo: &Todo) -> Card {
@@ -180,6 +159,6 @@ fn todo_card(index: usize, todo: &Todo) -> Card {
     )))
 }
 
-fn non_empty_title(path: impl Into<sdui::DynamicString>) -> CheckRule {
+fn non_empty_title(path: impl Into<a2ui::DynamicString>) -> CheckRule {
     CheckRule::new(v1::functions::regex("\\S", path)).message("Enter a non-whitespace title")
 }

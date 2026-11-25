@@ -33,7 +33,7 @@ Server sessions remain in memory until the server stops. SharedWorker state last
 
 ## Todo behavior
 
-The application implements add, edit, complete/reopen, delete, filter, clear completed, and async example loading. The subtitle uses `formatString`; the documentation button uses `openUrl`. Draft and edit TextFields use `regex("\\S", path)` checks. Rust validates and trims every submitted title.
+The application implements add, edit, complete/reopen, delete, filter, and clear completed. The subtitle uses `formatString`; the documentation button uses `openUrl`. Draft and edit TextFields use `regex("\\S", path)` checks. Rust validates and trims every submitted title.
 
 ## Run
 
@@ -70,5 +70,3 @@ pnpm --filter @sdui/web test
 pnpm run check
 pnpm run build
 ```
-
-The Rust WebSocket integration test verifies shared updates, late-client snapshots, and independent session IDs.

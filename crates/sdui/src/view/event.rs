@@ -1,6 +1,6 @@
 use std::{any::Any, fmt};
 
-use crate::{Action, ActionEvent, Event, FunctionCall};
+use a2ui::{Action, ActionEvent, Event, FunctionCall};
 
 use crate::{Effect, IntoActionResult, MaybeSend, MaybeSync};
 

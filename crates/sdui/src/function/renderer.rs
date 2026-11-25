@@ -15,7 +15,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{
+use a2ui::{
     AgentToRendererMessage, CallRendererFunction, FunctionError, FunctionResult,
     RendererFunctionResponseMessage,
 };
@@ -64,7 +64,7 @@ impl RendererFunctionCalls {
         &self,
         function_call_id: impl Into<String>,
         surface_id: Option<String>,
-        call: crate::FunctionCall,
+        call: a2ui::FunctionCall,
         timeout: Option<Duration>,
     ) -> Result<(AgentToRendererMessage, PendingFunctionCall), FunctionError> {
         if timeout.is_some_and(|timeout| timeout.is_zero()) {

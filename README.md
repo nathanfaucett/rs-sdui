@@ -18,10 +18,10 @@ No third-party Rust A2UI implementation is used.
 
 ## TypeScript packages
 
-| Package                 | Purpose                                                                                            |
-| ----------------------- | -------------------------------------------------------------------------------------------------- |
-| `@sdui/web`             | Renderer-independent async transports and SharedWorker synchronization for standard A2UI messages. |
-| `@sdui/browser-example` | A complete Rust/WASM todo application with two side-by-side official Lit renderers.                |
+| Package                 | Purpose                                                                                         |
+| ----------------------- | ----------------------------------------------------------------------------------------------- |
+| `@sdui/web`             | Renderer-independent processor connections, async transports, and SharedWorker synchronization. |
+| `@sdui/browser-example` | A complete Rust/WASM todo application with two side-by-side official Lit renderers.             |
 
 All TypeScript, WASM, and npm packages live under `packages/`. The helper does not select a rendering library.
 
@@ -304,7 +304,7 @@ The page starts with two configurable application instances. **Add instance** cr
 
 WASM is necessary because the Rust application executes inside that browser worker. `sdui` owns the reusable FFI on WASM targets; the example declares only `sdui::export_application!(crate::application, crate::TodoApp)`. `@sdui/web` owns worker synchronization. A server-hosted Rust application does not use the browser binding.
 
-`packages/web` defines the renderer-independent `Transport`/`Connection` seam and SharedWorker lifecycle helpers. Every connection exposes inbound messages as an `AsyncIterable` and accepts outbound renderer messages through `send()`. `SharedWorkerTransport`, `WebSocketTransport`, `SseTransport`, and `LocalStreamTransport` implement the same contract. The wire contains standard A2UI messages only; session IDs belong in worker names and WebSocket URLs. The example owns its Lit adapter in `packages/browser-example/src/mount-a2ui.ts`; other applications can use any rendering library.
+`packages/web` defines the renderer-independent `Transport`/`Connection` seam, `connectMessageProcessor` wiring, and SharedWorker lifecycle helpers. Every connection exposes inbound messages as an `AsyncIterable` and accepts outbound renderer messages through `send()`. `SharedWorkerTransport`, `WebSocketTransport`, `SseTransport`, and `LocalStreamTransport` implement the same contract. The wire contains standard A2UI messages only; session IDs belong in worker names and WebSocket URLs. The example owns its Lit adapter in `packages/browser-example/src/mount-a2ui.ts`; other applications can use any rendering library.
 
 A reconnection must use a fresh renderer mount and message processor. The new connection sends `Application::snapshot()` before new updates. The official processor rejects `createSurface` for an existing surface ID, so sending a snapshot into the old processor is invalid. Each renderer's **Go offline**/**Go online** toggle demonstrates missed updates and snapshot recovery while the other renderer keeps the worker alive. A transport with durable sequence replay can replay missed updates instead; otherwise, a full snapshot is the recovery mechanism. Do not blindly replay outbound actions because their side effects can already have run. If the application owner also stops, its in-memory state is gone; recovery then requires application-owned persistence.
 
@@ -313,8 +313,9 @@ The `dev` and `preview` scripts start the Rust WebSocket server on a dynamic int
 Useful checks:
 
 ```sh
-pnpm run check   # builds WASM and checks TypeScript and Biome
-pnpm run build   # production WASM + Vite build
+pnpm --filter @sdui/web test  # connector and transport tests
+pnpm run check               # builds WASM and checks TypeScript and Biome
+pnpm run build               # production WASM + Vite build
 ```
 
 The example uses official `@a2ui/web_core 0.16.1` and `@a2ui/lit 0.16.0` with the matching official v1.0 Basic Catalog. `@sdui/web` depends only on protocol types and schemas from `web_core`, not Lit or another renderer. No compatibility transform is applied. Keep the schema and SDK revisions aligned.

@@ -5,7 +5,7 @@ A complete todo application with configurable Rust application instances and off
 - `rust/`: the declarative application, native JSON stream, WebSocket session server, and WASM adapter.
 - `src/`: the Vite/TypeScript page, Lit renderer adapter, and worker entry.
 - `scripts/serve.ts`: starts the WebSocket server and Vite together.
-- `../web`: renderer-independent SharedWorker, WebSocket, and SSE transports.
+- `../web`: renderer-independent processor connections and SharedWorker, WebSocket, and SSE transports.
 
 ## Instances and sessions
 
@@ -29,7 +29,7 @@ Instances with the same backend and session ID share one application runtime and
 
 Server sessions remain in memory until the server stops. SharedWorker state lasts for the worker lifetime. Durable persistence remains application-owned.
 
-`@sdui/web` has no rendering dependency. `src/mount-a2ui.ts` is the example-owned Lit adapter. Replace it to use another renderer without changing either Rust runtime.
+`@sdui/web` has no rendering dependency. Its `connectMessageProcessor` helper owns outbound validation and the transport message loop. `src/mount-a2ui.ts` is the example-owned Lit adapter. Replace its surface mounting to use another renderer without changing either Rust runtime.
 
 ## Todo behavior
 
@@ -66,6 +66,7 @@ From the repository root:
 
 ```sh
 cargo test -p sdui-browser-example
+pnpm --filter @sdui/web test
 pnpm run check
 pnpm run build
 ```

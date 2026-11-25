@@ -1,6 +1,6 @@
 # `@sdui/web`
 
-Renderer-independent browser transport and SharedWorker synchronization for standard A2UI v1.0 messages.
+Renderer-independent processor connections, browser transports, and SharedWorker synchronization for standard A2UI v1.0 messages.
 
 This package does not mount components, create renderer elements, or depend on a UI framework. Use React, Svelte, Lit, native elements, or another A2UI-compatible renderer. The example owns its Lit adapter in `packages/browser-example/src/mount-a2ui.ts`.
 
@@ -59,8 +59,9 @@ Outbound POSTs wait for the SSE connection to open and execute in send order. An
 
 ### Tree shaking
 
-The package is side-effect-free. Root named imports and these transport entry points support tree shaking:
+The package is side-effect-free. Root named imports and these subpath entry points support tree shaking:
 
+- `@sdui/web/connect`
 - `@sdui/web/local`
 - `@sdui/web/shared-worker`
 - `@sdui/web/sse`
@@ -68,6 +69,30 @@ The package is side-effect-free. Root named imports and these transport entry po
 - `@sdui/web/worker`
 
 Keep future AG-UI, A2A, MCP, or other SDK-dependent adapters in transport-specific entry points with optional peer dependencies. Do not re-export those adapters from the root entry point.
+
+## Message processor connection
+
+`connectMessageProcessor` validates outbound renderer messages, connects a transport, and passes inbound messages to the official `MessageProcessor`. The factory runs before connecting, so surface listeners are ready for the initial snapshot:
+
+```ts
+import { MessageProcessor } from "@a2ui/web_core";
+import { basicCatalog } from "@a2ui/web_core/catalogs/basic/v1";
+import { connectMessageProcessor } from "@sdui/web/connect";
+
+const { processor, connection, done } = connectMessageProcessor(
+  transport,
+  (outboundListener) => {
+    const processor = new MessageProcessor([basicCatalog], undefined, {
+      unifiedOutbound: true,
+      outboundListener,
+    });
+    // Register renderer-specific surface listeners here.
+    return processor;
+  },
+);
+```
+
+Keep `unifiedOutbound: true` when actions must use the transport. The helper does not select catalogs, processor options, or a renderer. Call it with a fresh processor and transport connection after every disconnect.
 
 ## SharedWorker application
 

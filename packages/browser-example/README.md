@@ -5,7 +5,7 @@ A complete todo application with configurable Rust application instances and off
 - `rust/`: the declarative application, native JSON stream, WebSocket session server, and WASM adapter.
 - `src/`: the Vite/TypeScript page, Lit renderer adapter, and worker entry.
 - `scripts/serve.ts`: starts the WebSocket server and Vite together.
-- `../web`: renderer-independent SharedWorker and WebSocket transports.
+- `../web`: renderer-independent SharedWorker, WebSocket, and SSE transports.
 
 ## Instances and sessions
 

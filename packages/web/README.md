@@ -38,7 +38,36 @@ const transport = new WebSocketTransport(
 const connection = transport.connect();
 ```
 
-Use the URL for application session routing. Do not add custom fields to A2UI messages. `LocalStreamTransport` provides the contract for deterministic local streams. Add adapters for SSE, HTTP, or another application-owned transport without changing message shapes.
+Use the URL for application session routing. Do not add custom fields to A2UI messages.
+
+`SseTransport` receives standard messages through server-sent events and sends renderer messages through HTTP POST:
+
+```ts
+import { SseTransport } from "@sdui/web/sse";
+
+const transport = new SseTransport("/a2ui/events?session=my-session", {
+  sendUrl: "/a2ui/actions?session=my-session",
+});
+const connection = transport.connect();
+```
+
+`sendUrl` defaults to the event URL. Each default SSE `message` event must contain one standard A2UI JSON message in `data`. The server must accept each POST body as one standard renderer-to-agent JSON message, return a successful HTTP status, and publish agent messages to the event stream. POST response bodies are ignored.
+
+Outbound POSTs wait for the SSE connection to open and execute in send order. An SSE or POST failure closes the connection. Create a fresh connection and renderer before reconnecting; do not let an automatic SSE reconnect send a snapshot to an old renderer. Outbound messages are not retried because their effects may already have run.
+
+`LocalStreamTransport` provides the contract for deterministic local streams. Add adapters for HTTP or another application-owned transport without changing message shapes.
+
+### Tree shaking
+
+The package is side-effect-free. Root named imports and these transport entry points support tree shaking:
+
+- `@sdui/web/local`
+- `@sdui/web/shared-worker`
+- `@sdui/web/sse`
+- `@sdui/web/websocket`
+- `@sdui/web/worker`
+
+Keep future AG-UI, A2A, MCP, or other SDK-dependent adapters in transport-specific entry points with optional peer dependencies. Do not re-export those adapters from the root entry point.
 
 ## SharedWorker application
 

@@ -11,6 +11,7 @@ Use this file during review. These rules preserve the workspace architecture and
 - Use standard A2UI v1.0 messages. Do not add custom envelopes, message fields, compatibility transforms, or parallel protocols.
 - Keep transport independent of application state and rendering. Session routing belongs in transport URLs or worker names, not A2UI messages.
 - Keep `packages/web` renderer-independent. Applications choose and mount their own renderer.
+- Keep every transport tree-shakable. Use side-effect-free modules and transport-specific subpath exports. Keep SDK-dependent adapters out of the root entry point and declare their SDKs as optional peer dependencies.
 - Use generated catalog builders and typed state bindings. Application code must not manually construct component IDs, data paths, component lists, or surfaces.
 - Declarative events return the next state. Put I/O and other side effects in effects.
 - Use official A2UI SDKs and existing maintained libraries instead of implementing their behavior again.

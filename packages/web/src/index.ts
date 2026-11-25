@@ -1,4 +1,5 @@
 export { SharedWorkerTransport } from "./shared-worker-transport.js";
+export { SseTransport, type SseTransportOptions } from "./sse-transport.js";
 export type {
   AgentMessageStream,
   Connection,

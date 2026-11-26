@@ -35,3 +35,17 @@ No backwards compatibility, no legacy code, no versions.
 ## Final review
 
 Read `CODING_STANDARDS.md` before reviewing the diff. Report the validation actually run and any remaining warnings or risks.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked as local Markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the five canonical triage labels without renames. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use single-context domain documentation in the root `GLOSSARY.md`. See `docs/agents/domain.md`.

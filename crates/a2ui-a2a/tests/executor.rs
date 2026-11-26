@@ -49,7 +49,7 @@ fn metadata() -> HashMap<String, serde_json::Value> {
 fn processor() -> RendererMessageProcessor {
     let catalogs = CatalogSet::new([
         Catalog::from_json(include_str!(
-            "../../../packages/browser-example/rust/catalog.json"
+            "../../../apps/browser-example/rust/catalog.json"
         ))
         .unwrap(),
         Catalog::from_json(include_str!("../../sdui/tests/function/test_catalog.json")).unwrap(),

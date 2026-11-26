@@ -4,7 +4,7 @@ Use this file during review. These rules preserve the workspace architecture and
 
 ## Library and API boundaries
 
-- Put library crates under `crates/`. Keep browser and npm packages under `packages/`.
+- Put library crates under `crates/`. Keep reusable browser and npm packages under `packages/`. Keep deployable and demo applications under `apps/`.
 - Every `lib.rs` contains module declarations and project-owned exports only.
 - Use `pub` or private visibility. Do not use scoped visibility such as `pub(crate)`.
 - Do not re-export external crates.

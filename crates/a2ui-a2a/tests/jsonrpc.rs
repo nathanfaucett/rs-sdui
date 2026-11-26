@@ -46,7 +46,7 @@ fn capabilities() -> RendererCapabilities {
 fn catalogs() -> CatalogSet {
     CatalogSet::new([
         Catalog::from_json(include_str!(
-            "../../../packages/browser-example/rust/catalog.json"
+            "../../../apps/browser-example/rust/catalog.json"
         ))
         .unwrap(),
         Catalog::from_json(include_str!("../../sdui/tests/function/test_catalog.json")).unwrap(),

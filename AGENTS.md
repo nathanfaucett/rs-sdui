@@ -4,7 +4,7 @@
 
 - `README.md`: workspace architecture, application model, and public API.
 - `CODING_STANDARDS.md`: required review rules for every change.
-- `packages/browser-example/README.md`: browser sessions, transports, reconnection, and local processes.
+- `apps/browser-example/README.md`: browser sessions, transports, reconnection, and local processes.
 
 ## Local validation
 

@@ -71,7 +71,7 @@ Application development remains:
 5. Emit returned messages in order.
 6. Use `snapshot()` for late connections and authoritative recovery.
 
-The existing session pattern in `packages/browser-example/rust/src/server.rs` remains the model: one started application per session, serialized actions, ordered broadcasts, and snapshots for late clients.
+The existing session pattern in `apps/browser-example/rust/src/server.rs` remains the model: one started application per session, serialized actions, ordered broadcasts, and snapshots for late clients.
 
 ## 6. Module placement
 
@@ -265,6 +265,6 @@ Relevant local contracts:
 - `crates/a2ui/src/message.rs`
 - `crates/sdui/src/app/application.rs`
 - `crates/sdui/src/function/processor.rs`
-- `packages/browser-example/rust/src/server.rs`
+- `apps/browser-example/rust/src/server.rs`
 - `packages/web/src/transport.ts`
 - `packages/web/src/connect.ts`

@@ -37,7 +37,7 @@ async-trait = "0.1"
 axum = "0.8"
 futures.workspace = true
 sdui = { workspace = true, features = ["function"] }
-sdui-browser-example = { path = "../../packages/browser-example/rust" }
+sdui-browser-example = { path = "../../apps/browser-example/rust" }
 tokio.workspace = true
 tracing = "0.1"
 

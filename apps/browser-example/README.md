@@ -5,7 +5,7 @@ A complete todo application with configurable Rust application instances and off
 - `rust/`: the declarative application, application-owned Basic Catalog generation, native JSON stream, WebSocket session server, and WASM adapter.
 - `src/`: the Vite/TypeScript page, Lit renderer adapter, and worker entry.
 - `scripts/serve.ts`: starts the WebSocket server and Vite together.
-- `../web`: renderer-independent processor connections and SharedWorker, WebSocket, and SSE transports.
+- `../../packages/web`: renderer-independent processor connections and SharedWorker, WebSocket, and SSE transports.
 
 ## Instances and sessions
 
@@ -17,7 +17,7 @@ The page starts with two instances. **Add instance** creates another independent
 
 Instances with the same backend and session ID share one application runtime and ordered updates. A different session ID creates independent state. Worker and WebSocket runtimes are separate even when their session IDs match. The default session therefore synchronizes the two initial worker instances immediately.
 
-**Connect to session** applies backend or ID changes with a fresh renderer. **Remove** closes that instance's connection.
+Backend changes apply immediately. Session ID changes apply on blur when the ID is valid. Both use a fresh renderer. **Remove** closes that instance's connection.
 
 ## Message flow and recovery
 
@@ -33,7 +33,7 @@ Server sessions remain in memory until the server stops. SharedWorker state last
 
 ## Todo behavior
 
-The application implements add, edit, complete/reopen, delete, filter, and clear completed. The subtitle uses `formatString`; the documentation button uses `openUrl`. Draft and edit TextFields use `regex("\\S", path)` checks. Rust validates and trims every submitted title.
+The application implements add, edit, complete/reopen, delete, filter, and clear completed. The subtitle uses `formatString`; the documentation button uses `openUrl`. Empty draft and edit TextFields stay neutral; standard logical and `regex("\\S", path)` checks show errors for whitespace-only input. Add and Save buttons keep strict non-empty checks. Rust validates and trims every submitted title.
 
 ## Run
 

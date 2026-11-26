@@ -14,6 +14,9 @@ fn initial_json_uses_catalog_functions_checks_and_typed_paths() {
     assert!(initial.contains(r#""@call":"openUrl""#));
     assert!(initial.contains(r#""url":"https://a2ui.org/""#));
     assert_eq!(initial.matches(r#""@checks""#).count(), 2);
+    assert!(initial.contains(r#""@call":"or""#));
+    assert!(initial.contains(r#""@call":"not""#));
+    assert!(initial.contains(r#""@call":"required""#));
     assert!(initial.contains(r#""@call":"regex""#));
     assert!(initial.contains(r#""pattern":"\\S""#));
     assert!(initial.contains(r#""@path":"/draft""#));

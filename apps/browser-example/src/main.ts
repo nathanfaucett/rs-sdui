@@ -49,7 +49,6 @@ function addInstance(): void {
   const title = content.querySelector("[data-title]");
   const backend = content.querySelector("[data-backend]");
   const session = content.querySelector("[data-session]");
-  const settings = content.querySelector("[data-settings]");
   const connectivity = content.querySelector("[data-connectivity]");
   const remove = content.querySelector("[data-remove]");
   const target = content.querySelector("[data-target]");
@@ -60,7 +59,6 @@ function addInstance(): void {
     !title ||
     !(backend instanceof HTMLSelectElement) ||
     !(session instanceof HTMLInputElement) ||
-    !(settings instanceof HTMLFormElement) ||
     !(connectivity instanceof HTMLButtonElement) ||
     !(remove instanceof HTMLButtonElement) ||
     !(target instanceof HTMLElement) ||
@@ -73,6 +71,8 @@ function addInstance(): void {
   title.textContent = `Instance ${nextInstance}`;
   nextInstance += 1;
   let connection: Connection | undefined;
+  let connectedBackend: string | undefined;
+  let connectedSession: string | undefined;
   let online = false;
 
   const setOnline = (value: boolean) => {
@@ -95,11 +95,14 @@ function addInstance(): void {
       return;
     }
 
+    session.setCustomValidity("");
     disconnect();
     target.replaceChildren();
     const transport = backend.value === "websocket" ? websocketTransport(id) : workerTransport(id);
     const mounted = mountA2ui(target, "main", transport);
     connection = mounted.connection;
+    connectedBackend = backend.value;
+    connectedSession = id;
     setOnline(true);
     void mounted.done.then(
       () => {
@@ -112,10 +115,10 @@ function addInstance(): void {
     );
   };
 
+  backend.addEventListener("change", connect);
   session.addEventListener("input", () => session.setCustomValidity(""));
-  settings.addEventListener("submit", (event) => {
-    event.preventDefault();
-    connect();
+  session.addEventListener("blur", () => {
+    if (session.value.trim() !== connectedSession || backend.value !== connectedBackend) connect();
   });
   connectivity.addEventListener("click", () => {
     if (online) {

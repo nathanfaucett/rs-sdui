@@ -3,7 +3,7 @@ use sdui::{Element, EventExt};
 use serde_json::{Value, json};
 
 use crate::basic::v1::{
-    self, Button, ButtonVariant, Card, Column, Row, Text, TextField, TextVariant,
+    self, Button, ButtonVariant, Card, Column, Row, RowAlign, Text, TextField, TextVariant,
 };
 use crate::state::{Filter, Todo, TodoApp};
 
@@ -90,7 +90,7 @@ fn composer() -> Row {
     Row::new((
         TextField::new("New task", draft.clone())
             .placeholder("What needs to be done?")
-            .checks([title_rule.clone()]),
+            .checks([non_blank_title_if_present(draft.clone())]),
         Button::new(
             Text::new("+"),
             Event::new("add_todo")
@@ -100,6 +100,7 @@ fn composer() -> Row {
         .variant(ButtonVariant::Primary)
         .checks([title_rule]),
     ))
+    .align(RowAlign::Start)
 }
 
 fn todo_card(index: usize, todo: &Todo) -> Card {
@@ -116,7 +117,7 @@ fn todo_card(index: usize, todo: &Todo) -> Card {
     Card::new(Column::new((
         Text::new(status).variant(TextVariant::Caption),
         TextField::new(format!("Edit {}", todo.title), title_path.clone())
-            .checks([title_rule.clone()]),
+            .checks([non_blank_title_if_present(title_path.clone())]),
         Row::new((
             Element::from(
                 Button::new(
@@ -161,4 +162,12 @@ fn todo_card(index: usize, todo: &Todo) -> Card {
 
 fn non_empty_title(path: impl Into<a2ui::DynamicString>) -> CheckRule {
     CheckRule::new(v1::functions::regex("\\S", path)).message("Enter a non-whitespace title")
+}
+
+fn non_blank_title_if_present(path: a2ui::DataBinding) -> CheckRule {
+    CheckRule::new(v1::functions::or(json!([
+        a2ui::DynamicBoolean::from(v1::functions::not(v1::functions::required(path.clone(),))),
+        a2ui::DynamicBoolean::from(v1::functions::regex("\\S", path))
+    ])))
+    .message("Enter a non-whitespace title")
 }

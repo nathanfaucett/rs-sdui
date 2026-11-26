@@ -22,12 +22,17 @@ Use `a2ui` alone for wire-level protocol code. `sdui` depends on `a2ui` but does
 
 ## TypeScript packages
 
-| Package                 | Purpose                                                                                         |
-| ----------------------- | ----------------------------------------------------------------------------------------------- |
-| `@sdui/web`             | Renderer-independent processor connections, async transports, and SharedWorker synchronization. |
-| `@sdui/browser-example` | A complete Rust/WASM todo application with two side-by-side official Lit renderers.             |
+| Package     | Purpose                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------- |
+| `@sdui/web` | Renderer-independent processor connections, async transports, and SharedWorker synchronization. |
 
-All TypeScript, WASM, and npm packages live under `packages/`. The helper does not select a rendering library.
+Reusable TypeScript, WASM, and npm packages live under `packages/`. Deployable and demo applications live under `apps/`. The helper does not select a rendering library.
+
+## Applications
+
+| Application             | Purpose                                                                             |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| `@sdui/browser-example` | A complete Rust/WASM todo application with two side-by-side official Lit renderers. |
 
 ## Application model
 
@@ -301,13 +306,13 @@ pnpm install
 pnpm run dev
 ```
 
-The todo page implements add, edit, complete/reopen, delete, filter, and clear completed. It uses renderer `formatString`, `openUrl`, and `@checks` for reactive text, local navigation, and immediate whitespace-title validation. Rust still validates all submitted titles.
+The todo page implements add, edit, complete/reopen, delete, filter, and clear completed. It uses renderer `formatString`, `openUrl`, and `@checks` for reactive text, local navigation, and immediate whitespace-title validation without marking empty fields invalid. Rust still validates all submitted titles.
 
 The page starts with two configurable application instances. **Add instance** creates more. Each instance selects a WASM SharedWorker or the native Rust WebSocket server and a session ID. Instances with the same backend and session ID share one runtime; a different ID creates independent state. Both backends serialize actions, broadcast ordered updates, and send `snapshot()` to late clients. Renderer-local edits remain local until an action, as A2UI specifies.
 
 WASM is necessary because the Rust application executes inside that browser worker. `sdui` owns the reusable FFI on WASM targets; the example declares only `sdui::export_application!(crate::application, crate::TodoApp)`. `@sdui/web` owns worker synchronization. A server-hosted Rust application does not use the browser binding.
 
-`packages/web` defines the renderer-independent `Transport`/`Connection` seam, `connectMessageProcessor` wiring, and SharedWorker lifecycle helpers. Every connection exposes inbound messages as an `AsyncIterable` and accepts outbound renderer messages through `send()`. `SharedWorkerTransport`, `WebSocketTransport`, `SseTransport`, and `LocalStreamTransport` implement the same contract. The wire contains standard A2UI messages only; session IDs belong in worker names and WebSocket URLs. The example owns its Lit adapter in `packages/browser-example/src/mount-a2ui.ts`; other applications can use any rendering library.
+`packages/web` defines the renderer-independent `Transport`/`Connection` seam, `connectMessageProcessor` wiring, and SharedWorker lifecycle helpers. Every connection exposes inbound messages as an `AsyncIterable` and accepts outbound renderer messages through `send()`. `SharedWorkerTransport`, `WebSocketTransport`, `SseTransport`, and `LocalStreamTransport` implement the same contract. The wire contains standard A2UI messages only; session IDs belong in worker names and WebSocket URLs. The example owns its Lit adapter in `apps/browser-example/src/mount-a2ui.ts`; other applications can use any rendering library.
 
 A reconnection must use a fresh renderer mount and message processor. The new connection sends `Application::snapshot()` before new updates. The official processor rejects `createSurface` for an existing surface ID, so sending a snapshot into the old processor is invalid. Each renderer's **Go offline**/**Go online** toggle demonstrates missed updates and snapshot recovery while the other renderer keeps the worker alive. A transport with durable sequence replay can replay missed updates instead; otherwise, a full snapshot is the recovery mechanism. Do not blindly replay outbound actions because their side effects can already have run. If the application owner also stops, its in-memory state is gone; recovery then requires application-owned persistence.
 

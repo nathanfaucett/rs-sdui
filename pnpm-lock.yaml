@@ -173,7 +173,7 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
-  packages/browser-example:
+  apps/browser-example:
     dependencies:
       '@a2ui/lit':
         specifier: 0.16.0
@@ -183,7 +183,7 @@ importers:
         version: 0.16.1
       '@sdui/web':
         specifier: workspace:*
-        version: link:../web
+        version: link:../../packages/web
     devDependencies:
       '@tailwindcss/vite':
         specifier: 4.3.5

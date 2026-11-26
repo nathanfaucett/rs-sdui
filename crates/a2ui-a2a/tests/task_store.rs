@@ -121,7 +121,7 @@ impl TaskStoreFactory for FailingUpdateStoreFactory {
 
 fn processor() -> RendererMessageProcessor {
     let catalogs = CatalogSet::new([Catalog::from_json(include_str!(
-        "../../../packages/browser-example/rust/catalog.json"
+        "../../../apps/browser-example/rust/catalog.json"
     ))
     .unwrap()])
     .unwrap();

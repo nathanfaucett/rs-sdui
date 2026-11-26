@@ -2,7 +2,7 @@
 
 Renderer-independent processor connections, browser transports, and SharedWorker synchronization for standard A2UI v1.0 messages.
 
-This package does not mount components, create renderer elements, or depend on a UI framework. Use React, Svelte, Lit, native elements, or another A2UI-compatible renderer. The example owns its Lit adapter in `packages/browser-example/src/mount-a2ui.ts`.
+This package does not mount components, create renderer elements, or depend on a UI framework. Use React, Svelte, Lit, native elements, or another A2UI-compatible renderer. The example owns its Lit adapter in `apps/browser-example/src/mount-a2ui.ts`.
 
 ## Transport
 

@@ -9,7 +9,7 @@ The crate maps standard A2UI messages to A2A `DataPart` arrays with `metadata.mi
 Default features are empty.
 
 - `client`: `A2uiClient` and the official `a2a-client-lf` JSON-RPC transport.
-- `server`: `SduiExecutor`, `SduiRequestHandler`, and `SessionStore` with official `a2a-server-lf` types.
+- `server`: `SduiExecutor`, `SduiRequestHandler`, `SessionStore`, and `TaskStoreFactory` with official `a2a-server-lf` types.
 
 ## Server contract
 
@@ -27,6 +27,20 @@ Principal, canonical tenant, and `contextId` form the application `SessionKey`. 
 
 Use official `jsonrpc_router` and `agent_card_router` from `a2a-server-lf`. The Agent Card extension URI is `https://a2ui.org/a2a-extension/a2ui/v1.0`.
 
+## Task stores
+
+`InMemoryTaskStoreFactory` is the default. To provide another task-history implementation:
+
+1. Implement the official `a2a_server::task_store::TaskStore` trait.
+2. Implement `TaskStoreFactory` and return the store as `Arc<dyn TaskStore>`.
+3. Pass the factory to `SduiRequestHandler::with_task_store_factory`.
+
+The factory runs once for each new verified principal/tenant handler. Bind that `SessionIdentity` to the store's persistence scope; official store methods do not receive request credentials. Return the same scoped store when recreating handlers to retain history. Initialize slow database resources before request routing and share their handles.
+
+Task updates must be atomic, and `begin_cancel` must atomically check and transition state. Store errors propagate through official A2A error handling. Cancellation waits for yielded events to settle after either a successful or failed store operation; settlement is not a durability acknowledgment.
+
+A durable task store restores task reads and history. It does not restore active executions, subscribers, transient streams, or pending RPC. Reconcile orphaned nonterminal tasks during application startup. Do not replay actions or function calls automatically.
+
 ## Session stores
 
 `InMemorySessionStore` is the default. Implement `SessionStore<S>` for another lifetime or durability policy.
@@ -39,7 +53,7 @@ Use official `jsonrpc_router` and `agent_card_router` from `a2a-server-lf`. The 
 
 A failed save restores unsent initial messages and queued renderer calls. The next turn emits an authoritative surface when required.
 
-`SessionStore` durability does not make the official A2A task store durable. This slice keeps A2A task history in memory. A durable restart/recovery deployment also needs a durable A2A task-store integration.
+`SessionStore` durability does not make the official A2A task store durable. The default A2A task-history factory is in memory. A durable restart/recovery deployment must provide both stores through their respective traits.
 
 ## Client and recovery
 
@@ -61,4 +75,4 @@ Cancellation retains buffered UI output, waits for yielded events to settle, and
 - Native Rust only.
 - External A2A peer interoperability has not been validated.
 - No MCP or AG-UI adapter.
-- No durable A2A task-history implementation in this slice.
+- No built-in durable A2A task-history implementation; applications provide one through `TaskStoreFactory`.

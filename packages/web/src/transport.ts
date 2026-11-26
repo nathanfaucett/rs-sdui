@@ -8,6 +8,7 @@ export interface AgentMessageStream {
   messages: AsyncIterable<AgentToRendererMessage>;
   publish(message: AgentToRendererMessage): void;
   close(): void;
+  fail(error: unknown): void;
 }
 
 export interface Connection {
@@ -59,6 +60,11 @@ export function createAgentMessageStream(): AgentMessageStream {
       if (closed) return;
       closed = true;
       controller?.close();
+    },
+    fail(error) {
+      if (closed) return;
+      closed = true;
+      controller?.error(error);
     },
   };
 }

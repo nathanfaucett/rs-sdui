@@ -66,3 +66,25 @@ test("connects a configured processor and validates outbound messages", async ()
     console.error = originalConsoleError;
   }
 });
+
+test("rejects done when the transport stream fails", async () => {
+  const failure = new Error("connection lost");
+  const transport = {
+    connect() {
+      return {
+        messages: new ReadableStream({
+          start(controller) {
+            controller.error(failure);
+          },
+        }),
+        send() {},
+        close() {},
+      };
+    },
+  };
+  const connected = connectMessageProcessor(transport, () => ({
+    processMessages() {},
+  }));
+
+  await assert.rejects(connected.done, failure);
+});

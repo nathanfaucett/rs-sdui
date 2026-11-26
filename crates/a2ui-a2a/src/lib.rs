@@ -21,7 +21,7 @@ pub use metadata::{
     renderer_metadata,
 };
 #[cfg(feature = "server")]
-pub use server::{SduiExecutor, SduiRequestHandler};
+pub use server::{InMemoryTaskStoreFactory, SduiExecutor, SduiRequestHandler, TaskStoreFactory};
 #[cfg(feature = "server")]
 pub use session::{
     InMemorySessionStore, Session, SessionFactory, SessionHandle, SessionIdentity, SessionKey,

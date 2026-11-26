@@ -156,14 +156,15 @@ Implemented behavior:
 - `A2uiClient` provides unary and streaming turns, official interceptors, tenant routing, cancellation, subscription, task listing, and stable recovery.
 - `SduiExecutor` handles all ten A2UI variants, both function-RPC directions, cooperative cancellation, and terminal `Completed`, `Failed`, and `Canceled` states.
 - `SduiRequestHandler` resolves identity once and uses the verified principal and canonical tenant for application sessions and task-history isolation. The application server must authenticate credentials and authorize tenant access.
-- Official task stores are separate per principal/tenant and retained in memory. At most 1024 identity handlers are accepted. Cancellation is serialized per executor and waits for yielded events to settle before the official task store enters `Canceled`.
+- Official task stores are separate per principal/tenant. `TaskStoreFactory` accepts application-owned implementations of the official `TaskStore` trait; `InMemoryTaskStoreFactory` is the default. At most 1024 identity handlers are accepted. Cancellation is serialized per executor and waits for yielded events to settle before the official task store enters `Canceled`.
 - `SessionStore<S>` is the application persistence seam. `InMemorySessionStore` is the default. `save` is required and must atomically persist state and timestamps. `Session::restore` starts restored state with an authoritative surface, fresh processor, empty RPC outbox, and no pending calls.
 - Recovery deduplicates task and artifact IDs, requires terminal tasks, and compares two complete history reads. RPC messages are excluded. Recovered output is valid only for a fresh processor and must not be mixed with already applied stream events.
 
 Current limits:
 
 - No external A2A peer interoperability run has completed.
-- A2A task history is not durable in this slice. `SessionStore` durability alone does not restore `ListTasks` history after restart.
+- No durable A2A task-history backend is included. Applications can supply one through `TaskStoreFactory`. `SessionStore` durability alone does not restore `ListTasks` history after restart. A durable store must also reconcile orphaned executions and the separate session/task commit boundary; see `docs/research/a2ui-a2a-remaining-limits.md`.
+- Official SDK dependencies currently retain separate `base64` 0.22/0.23 and `tower-http` 0.6/0.7 branches. Their released SemVer requirements cannot be unified through lockfile selection; see the same research report.
 - No browser/WASM A2A transport, MCP adapter, or AG-UI adapter was added.
 - Application `Application<S>` code and existing browser transports are unchanged.
 
@@ -257,6 +258,7 @@ The protocol findings, SDK versions, and primary-source citations are consolidat
 
 - `docs/research/a2ui-transport-bindings.md`
 - `docs/research/a2ui-rust-binding-placement.md`
+- `docs/research/a2ui-a2a-remaining-limits.md`
 
 Relevant local contracts:
 

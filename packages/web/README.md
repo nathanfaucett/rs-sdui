@@ -27,18 +27,17 @@ for await (const message of connection.messages) {
 connection.send(rendererMessage);
 ```
 
-`WebSocketTransport` connects the same contract to a standard WebSocket. Each text frame contains one standard A2UI JSON message:
+`webSocketConnection` adapts an application-owned WebSocket to the same contract. Each text frame contains one standard A2UI JSON message:
 
 ```ts
-import { WebSocketTransport } from "@sdui/web";
+import { webSocketConnection } from "@sdui/web";
 
-const transport = new WebSocketTransport(
-  "wss://example.com/ws?session=my-session",
-);
+const socket = new WebSocket("wss://example.com/ws?session=my-session");
+const transport = { connect: () => webSocketConnection(socket) };
 const connection = transport.connect();
 ```
 
-Use the URL for application session routing. Do not add custom fields to A2UI messages.
+The application creates and authenticates the socket. The returned connection owns that socket until it closes. Each connection represents one WebSocket attempt and never reconnects. Use the URL for application session routing. Do not add custom fields to A2UI messages.
 
 `SseTransport` receives standard messages through server-sent events and sends renderer messages through HTTP POST:
 
@@ -92,7 +91,7 @@ const { processor, connection, done } = connectMessageProcessor(
 );
 ```
 
-Keep `unifiedOutbound: true` when actions must use the transport. The helper does not select catalogs, processor options, or a renderer. Call it with a fresh processor and transport connection after every disconnect.
+Keep `unifiedOutbound: true` when actions must use the transport. The helper does not select catalogs, processor options, or a renderer. Call it with a fresh processor and transport connection after every disconnect. `done` rejects when the transport stream or processor fails.
 
 ## SharedWorker application
 
@@ -115,10 +114,10 @@ The invoking Rust crate must depend directly on `wasm-bindgen`. The macro export
 
 ## Reconnection
 
-After a broken connection, create a new connection and fresh renderer state. The example worker and WebSocket server send a complete snapshot before new updates. Do not apply `createSurface` to a renderer that still has that surface. Durable transports can replay missed sequence numbers instead. Do not blindly replay outbound actions because their side effects can already have run.
+After a broken connection, create a new connection and fresh renderer state. The application owns authentication, reconnect policy, backoff, and cancellation; transports do not reconnect. The example worker and WebSocket server send a complete snapshot before new updates. Do not apply `createSurface` to a renderer that still has that surface. Durable transports can replay missed sequence numbers instead. Do not blindly replay outbound actions because their side effects can already have run.
 
 If the application owner stops, snapshot recovery is unavailable until the application restores its state. Persistence remains application-owned.
 
 ## Scope
 
-The package provides no renderer, persistence, executor, catalog negotiation, or custom A2UI envelopes. Its only official SDK dependency is `@a2ui/web_core` for protocol types and schema validation.
+The package provides no renderer, persistence, executor, catalog negotiation, authentication, connection recovery, or custom A2UI envelopes. Its only official SDK dependency is `@a2ui/web_core` for protocol types and schema validation.

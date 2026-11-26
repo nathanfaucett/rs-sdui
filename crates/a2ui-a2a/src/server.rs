@@ -174,7 +174,7 @@ impl<S: Serialize + Send + Sync + 'static> SduiExecutor<S> {
             execution.cancel();
             if execution.is_started() {
                 execution.wait_finished().await;
-                execution.wait_persisted().await;
+                execution.wait_settled().await;
             }
         }
     }
@@ -249,14 +249,41 @@ impl<S: Serialize + Send + Sync + 'static> SduiExecutor<S> {
     }
 }
 
+/// Creates an official A2A task store for one verified identity.
+///
+/// Store methods do not receive request credentials. Implementations must bind the supplied
+/// principal and canonical tenant to their persistence scope. Return a shared scoped store to
+/// retain history when request handlers are recreated.
+pub trait TaskStoreFactory: Send + Sync + 'static {
+    /// Creates or returns the store for `identity`.
+    ///
+    /// This synchronous factory runs during request routing. Initialize slow resources before
+    /// constructing the request handler and share their handles through the returned store.
+    ///
+    /// # Errors
+    /// Returns an error when the identity-scoped store is unavailable.
+    fn create(&self, identity: &SessionIdentity) -> Result<Arc<dyn TaskStore>, A2AError>;
+}
+
+/// Creates a new official in-memory task store for each identity handler.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct InMemoryTaskStoreFactory;
+
+impl TaskStoreFactory for InMemoryTaskStoreFactory {
+    fn create(&self, _identity: &SessionIdentity) -> Result<Arc<dyn TaskStore>, A2AError> {
+        Ok(Arc::new(InMemoryTaskStore::new()))
+    }
+}
+
 /// Routes verified principals and tenants to isolated official A2A task stores.
 ///
 /// The executor's identity resolver authenticates every request. Each principal and tenant
 /// receives a separate `DefaultRequestHandler`, so task listing, cancellation, and subscription
-/// cannot cross identity boundaries. Task stores are in memory in this vertical slice.
+/// cannot cross identity boundaries. Task stores are in memory by default.
 pub struct SduiRequestHandler<S> {
     executor: SduiExecutor<S>,
     capabilities: AgentCapabilities,
+    task_stores: Arc<dyn TaskStoreFactory>,
     handlers: StdMutex<HashMap<HandlerKey, Arc<HandlerEntry<S>>>>,
 }
 
@@ -288,9 +315,22 @@ impl<S> fmt::Debug for SduiRequestHandler<S> {
 impl<S: Serialize + Send + Sync + 'static> SduiRequestHandler<S> {
     #[must_use]
     pub fn new(executor: SduiExecutor<S>, capabilities: AgentCapabilities) -> Self {
+        Self::with_task_store_factory(executor, capabilities, InMemoryTaskStoreFactory)
+    }
+
+    /// Uses an application-owned factory for official A2A task stores.
+    ///
+    /// The factory runs once for each new verified principal/tenant handler.
+    #[must_use]
+    pub fn with_task_store_factory(
+        executor: SduiExecutor<S>,
+        capabilities: AgentCapabilities,
+        factory: impl TaskStoreFactory,
+    ) -> Self {
         Self {
             executor,
             capabilities,
+            task_stores: Arc::new(factory),
             handlers: StdMutex::new(HashMap::new()),
         }
     }
@@ -317,21 +357,22 @@ impl<S: Serialize + Send + Sync + 'static> SduiRequestHandler<S> {
         if handlers.len() >= MAX_IDENTITY_HANDLERS && !handlers.contains_key(&key) {
             return Err(A2AError::internal("A2A identity handler capacity reached"));
         }
-        let handler = handlers.entry(key).or_insert_with(|| {
-            let executor = self.executor.clone().with_fixed_identity(identity.clone());
-            let task_store = AcknowledgedTaskStore {
-                inner: InMemoryTaskStore::new(),
-                executor: executor.clone(),
-            };
-            Arc::new(HandlerEntry {
-                handler: Arc::new(
-                    DefaultRequestHandler::new(executor.clone(), task_store)
-                        .with_capabilities(self.capabilities.clone()),
-                ),
-                executor,
-            })
+        if let Some(handler) = handlers.get(&key) {
+            return Ok(Arc::clone(handler));
+        }
+        let executor = self.executor.clone().with_fixed_identity(identity.clone());
+        let task_store = SettlementTaskStore {
+            inner: self.task_stores.create(&identity)?,
+            executor: executor.clone(),
+        };
+        let handler = Arc::new(HandlerEntry {
+            handler: Arc::new(
+                DefaultRequestHandler::new(executor.clone(), task_store)
+                    .with_capabilities(self.capabilities.clone()),
+            ),
+            executor,
         });
-        let handler = Arc::clone(handler);
+        handlers.insert(key, Arc::clone(&handler));
         drop(handlers);
         Ok(handler)
     }
@@ -607,12 +648,12 @@ struct TaskExecution {
     artifact_id: String,
     cancel_notify: Notify,
     finished_notify: Notify,
-    persisted_notify: Notify,
+    settled_notify: Notify,
     release_notify: Notify,
     state: StdMutex<ExecutionState>,
 }
 
-const TERMINAL_PERSISTED: u8 = 1 << 0;
+const TERMINAL_SETTLED: u8 = 1 << 0;
 const CANCEL_EMITTED: u8 = 1 << 1;
 const STREAM_DROPPED: u8 = 1 << 2;
 const STREAM_RELEASED: u8 = 1 << 3;
@@ -625,7 +666,7 @@ struct ExecutionState {
     started: bool,
     outcome: Option<ExecutionOutcome>,
     yielded_events: u64,
-    persisted_events: u64,
+    settled_events: u64,
     flags: u8,
 }
 
@@ -635,7 +676,7 @@ impl TaskExecution {
             artifact_id: new_artifact_id(),
             cancel_notify: Notify::new(),
             finished_notify: Notify::new(),
-            persisted_notify: Notify::new(),
+            settled_notify: Notify::new(),
             release_notify: Notify::new(),
             state: StdMutex::new(ExecutionState::default()),
         }
@@ -697,15 +738,19 @@ impl TaskExecution {
         true
     }
 
-    fn mark_event_persisted(&self, terminal: bool) {
+    /// Marks one yielded event as handled by the official persistence path.
+    ///
+    /// Settlement includes store errors. It releases cancellation waiters but does not assert
+    /// that the write succeeded; the official request handler propagates that error separately.
+    fn mark_event_settled(&self, terminal: bool) {
         let mut state = self.lock();
-        state.persisted_events += 1;
+        state.settled_events += 1;
         if terminal {
-            state.flags |= TERMINAL_PERSISTED;
+            state.flags |= TERMINAL_SETTLED;
         }
         drop(state);
-        self.persisted_notify.notify_waiters();
-        self.persisted_notify.notify_one();
+        self.settled_notify.notify_waiters();
+        self.settled_notify.notify_one();
     }
 
     fn mark_cancel_emitted(&self) {
@@ -721,14 +766,14 @@ impl TaskExecution {
         }
         let abandoned = state.flags & ABANDONED != 0;
         if abandoned {
-            state.persisted_events = state.yielded_events;
+            state.settled_events = state.yielded_events;
         }
         drop(state);
         if abandoned {
             self.finished_notify.notify_waiters();
             self.finished_notify.notify_one();
-            self.persisted_notify.notify_waiters();
-            self.persisted_notify.notify_one();
+            self.settled_notify.notify_waiters();
+            self.settled_notify.notify_one();
         }
     }
 
@@ -737,7 +782,7 @@ impl TaskExecution {
     }
 
     fn should_remove(&self) -> bool {
-        self.has_flag(ABANDONED | TERMINAL_PERSISTED | CANCEL_EMITTED)
+        self.has_flag(ABANDONED | TERMINAL_SETTLED | CANCEL_EMITTED)
     }
 
     fn defer_release(&self) {
@@ -767,12 +812,12 @@ impl TaskExecution {
         }
     }
 
-    async fn wait_persisted(&self) {
+    async fn wait_settled(&self) {
         loop {
-            let notified = self.persisted_notify.notified();
+            let notified = self.settled_notify.notified();
             let settled = {
                 let state = self.lock();
-                state.persisted_events >= state.yielded_events
+                state.settled_events >= state.yielded_events
             };
             if settled {
                 return;
@@ -827,13 +872,13 @@ const fn is_persistent_event(event: &Result<StreamResponse, A2AError>) -> bool {
     )
 }
 
-struct AcknowledgedTaskStore<S> {
-    inner: InMemoryTaskStore,
+struct SettlementTaskStore<S> {
+    inner: Arc<dyn TaskStore>,
     executor: SduiExecutor<S>,
 }
 
 #[async_trait::async_trait]
-impl<S: Serialize + Send + Sync + 'static> TaskStore for AcknowledgedTaskStore<S> {
+impl<S: Serialize + Send + Sync + 'static> TaskStore for SettlementTaskStore<S> {
     async fn create(&self, task: Task) -> Result<TaskVersion, A2AError> {
         self.inner.create(task).await
     }
@@ -847,7 +892,7 @@ impl<S: Serialize + Send + Sync + 'static> TaskStore for AcknowledgedTaskStore<S
             executions.get(&key).cloned()
         };
         if let Some(execution) = execution {
-            execution.mark_event_persisted(terminal);
+            execution.mark_event_settled(terminal);
         }
         result
     }

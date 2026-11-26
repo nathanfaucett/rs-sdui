@@ -2,7 +2,7 @@ import {
   type Connection,
   SharedWorkerTransport,
   type Transport,
-  WebSocketTransport,
+  webSocketConnection,
 } from "@sdui/web";
 import { mountA2ui } from "./mount-a2ui";
 import "./style.css";
@@ -35,7 +35,8 @@ function websocketTransport(session: string): Transport {
   const url = new URL("/ws", window.location.href);
   url.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   url.searchParams.set("session", session);
-  return new WebSocketTransport(url);
+  const socket = new WebSocket(url);
+  return { connect: () => webSocketConnection(socket) };
 }
 
 function addInstance(): void {
@@ -100,9 +101,15 @@ function addInstance(): void {
     const mounted = mountA2ui(target, "main", transport);
     connection = mounted.connection;
     setOnline(true);
-    void mounted.done.then(() => {
-      if (connection === mounted.connection) disconnect();
-    });
+    void mounted.done.then(
+      () => {
+        if (connection === mounted.connection) disconnect();
+      },
+      (error: unknown) => {
+        console.error("A2UI connection failed", error);
+        if (connection === mounted.connection) disconnect();
+      }
+    );
   };
 
   session.addEventListener("input", () => session.setCustomValidity(""));

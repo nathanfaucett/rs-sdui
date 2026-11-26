@@ -288,10 +288,11 @@ The generator supports A2UI v1.0 only. Complex schema shapes without a small saf
 - `SduiExecutor` processes actions and both function-RPC directions. `SduiRequestHandler` authenticates and authorizes each request through an application-owned identity resolver.
 - Principal, canonical tenant, and `contextId` form the application session key. Principal and tenant also isolate official task history. The resolver runs once per request.
 - `SessionStore<S>` supports application-owned persistence. `InMemorySessionStore` is the default. Custom stores save state and timestamps atomically and restore through `Session::restore` with a fresh processor and no RPC outbox.
+- `TaskStoreFactory` accepts application-owned implementations of the official A2A `TaskStore` trait. Each factory call receives its verified principal/tenant identity. `InMemoryTaskStoreFactory` is the default.
 - Cancellation retains buffered UI output and waits for yielded task events to settle. It never replays actions or function calls.
 - `A2uiClient::snapshot()` requires terminal tasks and two stable complete history reads. It excludes both RPC directions. Apply recovered messages only to a fresh processor; do not mix them with events already applied from a stream.
 
-This slice is native Rust. Its official A2A task stores are in memory and capped at 1024 principal/tenant handlers per server. Application state can be durable through `SessionStore`, but task-history recovery after a server restart needs a separate durable A2A task-store integration. External-peer interoperability has not been validated. MCP and AG-UI are not implemented. See `crates/a2ui-a2a/README.md` for the public contract.
+This slice is native Rust. Its default official A2A task stores are in memory and capped at 1024 principal/tenant handlers per server. Application state can be durable through `SessionStore`; task history can be durable through a custom `TaskStoreFactory`. No durable backend is included, and active executions do not survive restart. External-peer interoperability has not been validated. MCP and AG-UI are not implemented. See `crates/a2ui-a2a/README.md` for the public contract.
 
 ## Browser example
 

@@ -29,7 +29,7 @@ Instances with the same backend and session ID share one application runtime and
 
 Server sessions remain in memory until the server stops. SharedWorker state lasts for the worker lifetime. Durable persistence remains application-owned.
 
-`@sdui/web` has no rendering dependency. Its `connectMessageProcessor` helper owns outbound validation and the transport message loop. `src/mount-a2ui.ts` is the example-owned Lit adapter. Replace its surface mounting to use another renderer without changing either Rust runtime.
+`@sdui/web` has no rendering dependency. Its `connectMessageProcessor` helper owns outbound validation and the transport message loop. `src/main.ts` owns WebSocket creation; `webSocketConnection` adapts one supplied socket. `src/mount-a2ui.ts` is the example-owned Lit adapter. Replace its surface mounting to use another renderer without changing either Rust runtime.
 
 ## Todo behavior
 

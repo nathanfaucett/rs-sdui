@@ -7,6 +7,7 @@ import type { Connection, Transport } from "./transport.js";
  *
  * The factory runs before connecting so it can register surface listeners first.
  * After a disconnect, create a new processor and connection before accepting a snapshot.
+ * The returned done promise rejects when the transport stream or processor fails.
  */
 export function connectMessageProcessor<T extends ComponentApi>(
   transport: Transport,
@@ -28,11 +29,7 @@ export function connectMessageProcessor<T extends ComponentApi>(
 
   connection = transport.connect();
   const consume = async () => {
-    try {
-      for await (const message of connection.messages) processor.processMessages(message);
-    } catch (error) {
-      console.error("A2UI transport stream error", error);
-    }
+    for await (const message of connection.messages) processor.processMessages(message);
   };
   const done = consume();
   return { processor, connection, done };

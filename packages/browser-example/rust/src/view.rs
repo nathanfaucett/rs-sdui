@@ -92,7 +92,7 @@ fn composer() -> Row {
             .placeholder("What needs to be done?")
             .checks([title_rule.clone()]),
         Button::new(
-            Text::new("Add task"),
+            Text::new("+"),
             Event::new("add_todo")
                 .context("title", draft)
                 .on(|state: &TodoApp, action| state.add(&action)),
@@ -149,7 +149,7 @@ fn todo_card(index: usize, todo: &Todo) -> Card {
                         .context("id", Value::from(id))
                         .on(|state: &TodoApp, action| state.remove(&action)),
                 )
-                .variant(ButtonVariant::Borderless),
+                .variant(ButtonVariant::Default),
             )
             .property(
                 "@accessibility",

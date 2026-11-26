@@ -11,6 +11,7 @@ This workspace is not a full A2UI Core SDK, Agent SDK, or renderer. Official A2U
 | Crate          | Purpose                                                                                                                                 |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `a2ui`         | Standard A2UI v1.0 component, dynamic-value, and message types.                                                                         |
+| `a2ui-a2a`     | Optional native A2UI v1.0 bindings for official A2A v1 JSON-RPC clients and servers.                                                    |
 | `sdui`         | Owned state machines, typed state bindings, declarative views, and browser lifecycle exports. Enable `function` for validation and RPC. |
 | `sdui-codegen` | `build.rs` generation of typed component builders and function helpers from catalog JSON Schema files.                                  |
 | `sdui-derive`  | Proc-macro implementation of the `A2uiData` derive exported by `sdui`.                                                                  |
@@ -279,6 +280,19 @@ Each catalog gets its own module, `CATALOG_ID`, `surface()` constructor, typed n
 
 The generator supports A2UI v1.0 only. Complex schema shapes without a small safe Rust mapping accept `serde_json::Value`; the generator does not invent replacement semantics. Required function arguments are constructor parameters and optional arguments are typed fluent methods. Generated conversions respect the declared return type, caller permissions, and user-activation requirements. Raw `FunctionCall` remains the low-level escape hatch.
 
+## Official A2A binding
+
+`a2ui-a2a` connects an unmodified `Application<S>` to official A2A v1 JSON-RPC. It uses standard A2UI messages in official A2A `DataPart` arrays. It adds no envelope, message field, compatibility transform, or parallel protocol. Its default feature set is empty; enable `client`, `server`, or both.
+
+- `A2uiClient` supports unary and streaming turns, cancellation, task subscription, and recovery. Official interceptors supply credentials and tenant routing.
+- `SduiExecutor` processes actions and both function-RPC directions. `SduiRequestHandler` authenticates and authorizes each request through an application-owned identity resolver.
+- Principal, canonical tenant, and `contextId` form the application session key. Principal and tenant also isolate official task history. The resolver runs once per request.
+- `SessionStore<S>` supports application-owned persistence. `InMemorySessionStore` is the default. Custom stores save state and timestamps atomically and restore through `Session::restore` with a fresh processor and no RPC outbox.
+- Cancellation retains buffered UI output and waits for yielded task events to settle. It never replays actions or function calls.
+- `A2uiClient::snapshot()` requires terminal tasks and two stable complete history reads. It excludes both RPC directions. Apply recovered messages only to a fresh processor; do not mix them with events already applied from a stream.
+
+This slice is native Rust. Its official A2A task stores are in memory and capped at 1024 principal/tenant handlers per server. Application state can be durable through `SessionStore`, but task-history recovery after a server restart needs a separate durable A2A task-store integration. External-peer interoperability has not been validated. MCP and AG-UI are not implemented. See `crates/a2ui-a2a/README.md` for the public contract.
+
 ## Browser example
 
 ```sh
@@ -319,4 +333,4 @@ cargo clippy --workspace --all-targets --all-features
 
 ## Scope
 
-These crates provide application state, authoring, code generation, offline function validation, and bidirectional function RPC. They do not provide catalog negotiation, a network transport, an async executor, renderer-side expression evaluation, inference compilation, or native rendering.
+The core crates provide application state, authoring, code generation, offline function validation, and bidirectional function RPC. They do not provide catalog negotiation, an async executor, renderer-side expression evaluation, inference compilation, or native rendering. Network support is optional in `a2ui-a2a` and the example transports.

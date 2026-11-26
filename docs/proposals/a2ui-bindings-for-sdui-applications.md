@@ -1,7 +1,7 @@
 # Proposal: A2UI bindings for SDUI applications
 
 Date: 2026-11-25  
-Status: proposed; no implementation approved or included
+Status: native A2A slice implemented; external-peer validation pending; MCP and AG-UI deferred
 
 ## 1. Summary
 
@@ -146,6 +146,26 @@ The first slice is complete when:
 - Reconnection does not duplicate surfaces or replay actions.
 - The same application still works through its existing transport without changes.
 - Interoperability passes against the selected official A2A v1 peer.
+
+### 7.6 Implementation status and limits
+
+The native slice is implemented in `crates/a2ui-a2a`; payload schemas are in `crates/a2ui`. Default features are empty. `client` and `server` independently enable official networking crates.
+
+Implemented behavior:
+
+- `A2uiClient` provides unary and streaming turns, official interceptors, tenant routing, cancellation, subscription, task listing, and stable recovery.
+- `SduiExecutor` handles all ten A2UI variants, both function-RPC directions, cooperative cancellation, and terminal `Completed`, `Failed`, and `Canceled` states.
+- `SduiRequestHandler` resolves identity once and uses the verified principal and canonical tenant for application sessions and task-history isolation. The application server must authenticate credentials and authorize tenant access.
+- Official task stores are separate per principal/tenant and retained in memory. At most 1024 identity handlers are accepted. Cancellation is serialized per executor and waits for yielded events to settle before the official task store enters `Canceled`.
+- `SessionStore<S>` is the application persistence seam. `InMemorySessionStore` is the default. `save` is required and must atomically persist state and timestamps. `Session::restore` starts restored state with an authoritative surface, fresh processor, empty RPC outbox, and no pending calls.
+- Recovery deduplicates task and artifact IDs, requires terminal tasks, and compares two complete history reads. RPC messages are excluded. Recovered output is valid only for a fresh processor and must not be mixed with already applied stream events.
+
+Current limits:
+
+- No external A2A peer interoperability run has completed.
+- A2A task history is not durable in this slice. `SessionStore` durability alone does not restore `ListTasks` history after restart.
+- No browser/WASM A2A transport, MCP adapter, or AG-UI adapter was added.
+- Application `Application<S>` code and existing browser transports are unchanged.
 
 ## 8. Phase 2: scoped MCP support
 

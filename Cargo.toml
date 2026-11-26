@@ -12,6 +12,10 @@ repository = "https://github.com/nathanfaucett/rs-sdui"
 
 [workspace.dependencies]
 a2ui = { path = "crates/a2ui" }
+
+a2a = { package = "a2a-lf", version = "0.4.2" }
+a2a-client = { package = "a2a-client-lf", version = "0.2.9", default-features = false, features = ["rustls-tls"] }
+a2a-server = { package = "a2a-server-lf", version = "0.5.3", default-features = false }
 sdui = { path = "crates/sdui" }
 sdui-codegen = { path = "crates/sdui-codegen" }
 sdui-derive = { path = "crates/sdui-derive" }

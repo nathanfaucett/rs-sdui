@@ -3,10 +3,14 @@
 //! Application state, declarative views, transport, and rendering stay outside
 //! this crate.
 
+mod capability;
 mod component;
 mod dynamic;
 mod message;
 
+pub use capability::{
+    AgentCapabilities, AgentCapability, RendererCapabilities, RendererCapability, RendererDataModel,
+};
 pub use component::{CheckRule, ChildList, ChildTemplate, Component, Condition};
 pub use dynamic::{
     Action, DataBinding, DynamicBoolean, DynamicNumber, DynamicString, DynamicStringList,

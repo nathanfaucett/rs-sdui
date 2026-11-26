@@ -1,0 +1,45 @@
+[package]
+name = "a2ui-a2a"
+description = "Official A2UI v1.0 extension mapping for the A2A protocol"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["a2ui", "a2a", "protocol", "serde"]
+categories = ["api-bindings"]
+
+[features]
+default = []
+client = ["dep:a2a-client", "dep:async-trait"]
+server = ["dep:a2a-server", "dep:async-trait", "dep:chrono", "dep:futures", "dep:sdui", "dep:tokio", "dep:tracing"]
+
+[dependencies]
+a2a.workspace = true
+a2a-client = { workspace = true, optional = true }
+a2a-server = { workspace = true, optional = true }
+a2ui.workspace = true
+async-trait = { version = "0.1", optional = true }
+chrono = { version = "0.4", optional = true }
+futures = { workspace = true, optional = true }
+sdui = { workspace = true, features = ["function"], optional = true }
+serde.workspace = true
+serde_json.workspace = true
+tokio = { workspace = true, optional = true }
+tracing = { version = "0.1", optional = true }
+
+[dev-dependencies]
+a2a-client.workspace = true
+a2a-server.workspace = true
+async-trait = "0.1"
+axum = "0.8"
+futures.workspace = true
+sdui = { workspace = true, features = ["function"] }
+sdui-browser-example = { path = "../../packages/browser-example/rust" }
+tokio.workspace = true
+tracing = "0.1"
+
+[lints]
+workspace = true

@@ -27,6 +27,8 @@ for await (const message of connection.messages) {
 connection.send(rendererMessage);
 ```
 
+Keep the worker URL inline in the `SharedWorker` constructor as shown. Vite requires this statically analyzable form to emit the worker and its WASM assets.
+
 `webSocketConnection` adapts an application-owned WebSocket to the same contract. Each text frame contains one standard A2UI JSON message:
 
 ```ts

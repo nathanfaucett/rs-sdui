@@ -1,10 +1,13 @@
 # SDUI agent guide
 
-## Read first
+## Documentation
 
-- `README.md`: workspace architecture, application model, and public API.
-- `CODING_STANDARDS.md`: required review rules for every change.
-- `apps/browser-example/README.md`: browser sessions, transports, reconnection, and local processes.
+Read the guide for each area you change:
+
+- Application state, views, functions, and emission: `crates/sdui/README.md`.
+- Browser sessions, recovery, and local processes: `apps/browser-example/README.md`.
+- Browser transport and worker APIs: `packages/web/README.md`.
+- A2A identity, stores, cancellation, and recovery: `crates/a2ui-a2a/README.md`.
 
 ## Local validation
 
@@ -26,26 +29,18 @@ After Vite, worker, transport, or bundle changes, also validate the production b
 - Use role and label selectors for inputs. Input values are not page text.
 - Stop the preview processes after validation.
 
-After `cargo update`, inspect Clippy output carefully for duplicate dependency versions. Follow the dependency rules in `CODING_STANDARDS.md`.
+After `cargo update`, inspect Clippy output carefully for duplicate dependency versions. A lockfile can select a coherent older branch without changing public dependency ranges. Follow the dependency rules in `CODING_STANDARDS.md`.
 
-## Pre-Release
+## Pre-release
 
-No backwards compatibility, no legacy code, no versions.
+Before release, replace old APIs directly. Do not retain compatibility shims, legacy modules, or parallel API versions.
 
 ## Final review
 
 Read `CODING_STANDARDS.md` before reviewing the diff. Report the validation actually run and any remaining warnings or risks.
 
-## Agent skills
+## Local workflows
 
-### Issue tracker
-
-Issues and specs are tracked as local Markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Use the five canonical triage labels without renames. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Use single-context domain documentation in the root `GLOSSARY.md`. See `docs/agents/domain.md`.
+- Issues and specs: local Markdown files under `.scratch/`; see `docs/agents/issue-tracker.md`.
+- Triage labels: use the five canonical labels without renames; see `docs/agents/triage-labels.md`.
+- Domain documentation: use the single-context root `GLOSSARY.md`; see `docs/agents/domain.md`.

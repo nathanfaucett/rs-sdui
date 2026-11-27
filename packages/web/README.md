@@ -54,9 +54,17 @@ const connection = transport.connect();
 
 `sendUrl` defaults to the event URL. Each default SSE `message` event must contain one standard A2UI JSON message in `data`. The server must accept each POST body as one standard renderer-to-agent JSON message, return a successful HTTP status, and publish agent messages to the event stream. POST response bodies are ignored.
 
-Outbound POSTs wait for the SSE connection to open and execute in send order. An SSE or POST failure closes the connection. Create a fresh connection and renderer before reconnecting; do not let an automatic SSE reconnect send a snapshot to an old renderer. Outbound messages are not retried because their effects may already have run.
+Outbound POSTs wait for the SSE connection to open and execute in send order. An SSE or POST failure closes the connection and rejects its message stream. Create a fresh connection and renderer before reconnecting; do not let an automatic SSE reconnect send a snapshot to an old renderer. Outbound messages are not retried because their effects may already have run.
 
 `LocalStreamTransport` provides the contract for deterministic local streams. Add adapters for HTTP or another application-owned transport without changing message shapes.
+
+### Errors
+
+Fatal transport failures reject `connection.messages` and therefore the `done` promise returned by `connectMessageProcessor`. Handle that rejection in the application. `TransportError` includes the `transport`, the `operation` (`open`, `receive`, `send`, or `runtime`), and the original `cause`.
+
+For the built-in transports, `connection.close()` ends the message stream normally. Every remote WebSocket close rejects, including a clean close, so the application can inspect the `CloseEvent` in `cause` and decide whether to reconnect. SSE failures preserve the event, request error, or non-successful `Response` as the cause. SharedWorker failures close the port before rejecting. Local action and replay failures preserve the thrown value as the cause.
+
+Malformed message logging and dropping is separate from fatal transport error reporting. Sends do not acknowledge application action execution.
 
 ### Tree shaking
 
@@ -116,7 +124,11 @@ The invoking Rust crate must depend directly on `wasm-bindgen`. The macro export
 
 ## Reconnection
 
-After a broken connection, create a new connection and fresh renderer state. The application owns authentication, reconnect policy, backoff, and cancellation; transports do not reconnect. The example worker and WebSocket server send a complete snapshot before new updates. Do not apply `createSurface` to a renderer that still has that surface. Durable transports can replay missed sequence numbers instead. Do not blindly replay outbound actions because their side effects can already have run.
+After any unexpected `done` rejection, close the old connection and create a new connection and fresh renderer state. Catch synchronous socket or transport construction failures in the same application retry loop. A WebSocket adapter represents one attempt, so the retry loop must construct a new WebSocket instead of reusing its transport.
+
+The application owns authentication, reconnect policy, backoff, and cancellation; transports do not reconnect. Use capped exponential backoff with jitter to avoid retry storms, and stop the loop when the application intentionally closes. Reset backoff only after a stable connection. Use open or idle timeouts and server heartbeats where needed: browser WebSockets do not expose ping/pong events to application code.
+
+The example worker and WebSocket server send a complete snapshot before new updates. Do not apply `createSurface` to a renderer that still has that surface. Durable transports can replay missed sequence numbers instead. Do not blindly replay outbound actions because their side effects can already have run.
 
 If the application owner stops, snapshot recovery is unavailable until the application restores its state. Persistence remains application-owned.
 

@@ -4,6 +4,26 @@ import type {
   RendererToAgentMessage,
 } from "@a2ui/web_core/v1_0";
 
+type TransportKind = "websocket" | "sse" | "shared-worker" | "local";
+type TransportOperation = "open" | "receive" | "send" | "runtime";
+
+export class TransportError extends Error {
+  readonly transport: TransportKind;
+  readonly operation: TransportOperation;
+
+  constructor(
+    message: string,
+    transport: TransportKind,
+    operation: TransportOperation,
+    options?: ErrorOptions
+  ) {
+    super(message, options);
+    this.name = "TransportError";
+    this.transport = transport;
+    this.operation = operation;
+  }
+}
+
 export interface AgentMessageStream {
   messages: AsyncIterable<AgentToRendererMessage>;
   publish(message: AgentToRendererMessage): void;
@@ -88,24 +108,44 @@ export class LocalStreamTransport implements Transport {
     this.stream = stream;
     let closed = false;
 
+    const finish = (error?: TransportError): void => {
+      if (closed) return;
+      closed = true;
+      this.activeStream?.abort();
+      this.activeStream = undefined;
+      this.surfaceCreated = false;
+      if (error === undefined) {
+        stream.close();
+      } else {
+        stream.fail(error);
+      }
+      if (this.stream === stream) this.stream = undefined;
+    };
+
     const connection: Connection = {
       messages: stream.messages,
       send: (message) => {
         if (closed || !("action" in message)) return;
-        for (const update of this.handleAction(message)) stream.publish(update);
+        try {
+          for (const update of this.handleAction(message)) stream.publish(update);
+        } catch (error) {
+          finish(
+            new TransportError("A2UI local action failed", "local", "send", {
+              cause: error,
+            })
+          );
+        }
       },
-      close: () => {
-        if (closed) return;
-        closed = true;
-        this.activeStream?.abort();
-        this.activeStream = undefined;
-        this.surfaceCreated = false;
-        stream.close();
-        if (this.stream === stream) this.stream = undefined;
-      },
+      close: () => finish(),
     };
 
-    void this.replay();
+    void this.replay().catch((error: unknown) => {
+      finish(
+        new TransportError("A2UI local replay failed", "local", "receive", {
+          cause: error,
+        })
+      );
+    });
     return connection;
   }
 

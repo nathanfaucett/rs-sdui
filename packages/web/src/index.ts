@@ -7,5 +7,9 @@ export type {
   LocalStreamOptions,
   Transport,
 } from "./transport.js";
-export { createAgentMessageStream, LocalStreamTransport } from "./transport.js";
+export {
+  createAgentMessageStream,
+  LocalStreamTransport,
+  TransportError,
+} from "./transport.js";
 export { webSocketConnection } from "./websocket-transport.js";

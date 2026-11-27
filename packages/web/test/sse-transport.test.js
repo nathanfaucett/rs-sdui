@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { SseTransport } from "../dist/sse-transport.js";
+import { TransportError } from "../dist/transport.js";
 
 class MockEventSource {
   static instances = [];
@@ -137,10 +138,10 @@ test("waits for SSE open and preserves outbound POST order", async () => {
   );
 });
 
-test("closes instead of automatically reconnecting after an SSE error", async () => {
+test("rejects and closes instead of automatically reconnecting after an SSE error", async () => {
   await withMocks(
     async () => ({ ok: true, status: 204 }),
-    async (errors) => {
+    async () => {
       const connection = new SseTransport("/events").connect();
       const source = MockEventSource.instances[0];
       const done = (async () => {
@@ -150,19 +151,22 @@ test("closes instead of automatically reconnecting after an SSE error", async ()
       })();
 
       source.emitError();
-      await done;
 
+      await assert.rejects(done, (error) => {
+        assert.ok(error instanceof TransportError);
+        assert.equal(error.transport, "sse");
+        assert.equal(error.operation, "open");
+        return true;
+      });
       assert.equal(source.closed, true);
-      assert.equal(errors.length, 1);
-      assert.equal(errors[0][0], "A2UI SSE connection error");
     }
   );
 });
 
-test("closes after a failed outbound POST", async () => {
+test("rejects and closes after a failed outbound POST", async () => {
   await withMocks(
     async () => ({ ok: false, status: 503 }),
-    async (errors) => {
+    async () => {
       const connection = new SseTransport("/events").connect();
       const source = MockEventSource.instances[0];
       const done = (async () => {
@@ -173,12 +177,16 @@ test("closes after a failed outbound POST", async () => {
 
       source.emitOpen();
       connection.send({ action: { name: "test" } });
-      await done;
 
+      await assert.rejects(done, (error) => {
+        assert.ok(error instanceof TransportError);
+        assert.equal(error.transport, "sse");
+        assert.equal(error.operation, "send");
+        assert.match(error.message, /503/);
+        assert.equal(error.cause.status, 503);
+        return true;
+      });
       assert.equal(source.closed, true);
-      assert.equal(errors.length, 1);
-      assert.equal(errors[0][0], "A2UI SSE send error");
-      assert.match(errors[0][1].message, /503/);
     }
   );
 });

@@ -1,16 +1,15 @@
 import { AgentToRendererMessageSchema } from "@a2ui/web_core/v1_0";
-import { type Connection, createAgentMessageStream } from "./transport.js";
+import { type Connection, createAgentMessageStream, TransportError } from "./transport.js";
 
 export function webSocketConnection(socket: WebSocket): Connection {
   const stream = createAgentMessageStream();
   const pending: string[] = [];
   let closed = false;
-  let errorEvent: Event | undefined;
+  let opened = false;
 
   function removeListeners(): void {
     socket.removeEventListener("open", onOpen);
     socket.removeEventListener("message", onMessage);
-    socket.removeEventListener("error", onError);
     socket.removeEventListener("close", onClose);
   }
 
@@ -28,8 +27,17 @@ export function webSocketConnection(socket: WebSocket): Connection {
   }
 
   function onOpen(): void {
-    for (const message of pending) socket.send(message);
-    pending.length = 0;
+    opened = true;
+    try {
+      for (const message of pending) socket.send(message);
+      pending.length = 0;
+    } catch (error) {
+      finish(
+        new TransportError("A2UI WebSocket send failed", "websocket", "send", {
+          cause: error,
+        })
+      );
+    }
   }
 
   function onMessage(event: MessageEvent<unknown>): void {
@@ -50,39 +58,38 @@ export function webSocketConnection(socket: WebSocket): Connection {
     }
   }
 
-  function onError(event: Event): void {
-    errorEvent = event;
-  }
-
   function onClose(event: CloseEvent): void {
-    if (event.wasClean && errorEvent === undefined) {
-      finish();
-      return;
-    }
-
     const detail = event.reason ? `: ${event.reason}` : "";
     finish(
-      new Error(`A2UI WebSocket closed (${event.code})${detail}`, {
-        cause: event,
-      })
+      new TransportError(
+        `A2UI WebSocket closed (${event.code})${detail}`,
+        "websocket",
+        opened ? "receive" : "open",
+        { cause: event }
+      )
     );
   }
 
   socket.addEventListener("open", onOpen);
   socket.addEventListener("message", onMessage);
   // Close follows a WebSocket error and carries the details needed for recovery.
-  socket.addEventListener("error", onError);
   socket.addEventListener("close", onClose);
 
   return {
     messages: stream.messages,
     send: (message) => {
       if (closed) return;
-      const json = JSON.stringify(message);
-      if (socket.readyState === socket.OPEN) {
-        socket.send(json);
-      } else if (socket.readyState === socket.CONNECTING) {
-        pending.push(json);
+      try {
+        const json = JSON.stringify(message);
+        if (socket.readyState === socket.OPEN) {
+          socket.send(json);
+        } else if (socket.readyState === socket.CONNECTING) {
+          pending.push(json);
+        }
+      } catch (error) {
+        finish(
+          new TransportError("A2UI WebSocket send failed", "websocket", "send", { cause: error })
+        );
       }
     },
     close: () => finish(),

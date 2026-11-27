@@ -1,5 +1,10 @@
 import { AgentToRendererMessageSchema } from "@a2ui/web_core/v1_0";
-import { type Connection, createAgentMessageStream, type Transport } from "./transport.js";
+import {
+  type Connection,
+  createAgentMessageStream,
+  type Transport,
+  TransportError,
+} from "./transport.js";
 
 export class SharedWorkerTransport implements Transport {
   private readonly createWorker: () => SharedWorker;
@@ -11,9 +16,6 @@ export class SharedWorkerTransport implements Transport {
   connect(): Connection {
     const worker = this.createWorker();
     const port = worker.port;
-    worker.addEventListener("error", (event) => {
-      console.error("A2UI shared worker error", event.message, event.filename, event.lineno);
-    });
     const stream = createAgentMessageStream();
     let closed = false;
 
@@ -26,9 +28,34 @@ export class SharedWorkerTransport implements Transport {
       }
     };
     const onMessageError = (event: MessageEvent<unknown>) => {
-      console.error("A2UI worker message error", event);
+      finish(
+        new TransportError("A2UI shared worker message failed", "shared-worker", "receive", {
+          cause: event,
+        })
+      );
+    };
+    const onError = (event: ErrorEvent) => {
+      finish(
+        new TransportError("A2UI shared worker failed", "shared-worker", "runtime", {
+          cause: event,
+        })
+      );
+    };
+    const finish = (error?: TransportError): void => {
+      if (closed) return;
+      closed = true;
+      worker.removeEventListener("error", onError);
+      port.removeEventListener("message", onMessage);
+      port.removeEventListener("messageerror", onMessageError);
+      port.close();
+      if (error === undefined) {
+        stream.close();
+      } else {
+        stream.fail(error);
+      }
     };
 
+    worker.addEventListener("error", onError);
     port.addEventListener("message", onMessage);
     port.addEventListener("messageerror", onMessageError);
     port.start();
@@ -36,16 +63,18 @@ export class SharedWorkerTransport implements Transport {
     return {
       messages: stream.messages,
       send: (message) => {
-        if (!closed) port.postMessage(message);
-      },
-      close: () => {
         if (closed) return;
-        closed = true;
-        port.removeEventListener("message", onMessage);
-        port.removeEventListener("messageerror", onMessageError);
-        port.close();
-        stream.close();
+        try {
+          port.postMessage(message);
+        } catch (error) {
+          finish(
+            new TransportError("A2UI shared worker send failed", "shared-worker", "send", {
+              cause: error,
+            })
+          );
+        }
       },
+      close: () => finish(),
     };
   }
 }

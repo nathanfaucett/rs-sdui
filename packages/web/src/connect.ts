@@ -29,7 +29,12 @@ export function connectMessageProcessor<T extends ComponentApi>(
 
   connection = transport.connect();
   const consume = async () => {
-    for await (const message of connection.messages) processor.processMessages(message);
+    try {
+      for await (const message of connection.messages) processor.processMessages(message);
+    } catch (error) {
+      connection.close();
+      throw error;
+    }
   };
   const done = consume();
   return { processor, connection, done };

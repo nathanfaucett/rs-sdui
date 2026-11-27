@@ -67,8 +67,9 @@ test("connects a configured processor and validates outbound messages", async ()
   }
 });
 
-test("rejects done when the transport stream fails", async () => {
+test("rejects done and closes the transport when the transport stream fails", async () => {
   const failure = new Error("connection lost");
+  let closed = false;
   const transport = {
     connect() {
       return {
@@ -78,7 +79,9 @@ test("rejects done when the transport stream fails", async () => {
           },
         }),
         send() {},
-        close() {},
+        close() {
+          closed = true;
+        },
       };
     },
   };
@@ -87,4 +90,33 @@ test("rejects done when the transport stream fails", async () => {
   }));
 
   await assert.rejects(connected.done, failure);
+  assert.equal(closed, true);
+});
+
+test("rejects done and closes the transport when the processor fails", async () => {
+  const failure = new Error("processor failed");
+  let closed = false;
+  const connected = connectMessageProcessor(
+    {
+      connect() {
+        return {
+          messages: (async function* () {
+            yield { version: "1.0" };
+          })(),
+          send() {},
+          close() {
+            closed = true;
+          },
+        };
+      },
+    },
+    () => ({
+      processMessages() {
+        throw failure;
+      },
+    })
+  );
+
+  await assert.rejects(connected.done, failure);
+  assert.equal(closed, true);
 });

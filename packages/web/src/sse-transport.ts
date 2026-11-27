@@ -1,5 +1,10 @@
 import { AgentToRendererMessageSchema } from "@a2ui/web_core/v1_0";
-import { type Connection, createAgentMessageStream, type Transport } from "./transport.js";
+import {
+  type Connection,
+  createAgentMessageStream,
+  type Transport,
+  TransportError,
+} from "./transport.js";
 
 export interface SseTransportOptions {
   eventSourceInit?: EventSourceInit;
@@ -28,20 +33,26 @@ export class SseTransport implements Transport {
     let opened = false;
     let queue: Promise<void> = Promise.resolve();
 
-    function close(): void {
+    function finish(error?: TransportError): void {
       if (closed) return;
       closed = true;
       opened = false;
       pending.length = 0;
       abort.abort();
       source.close();
-      stream.close();
+      if (error === undefined) {
+        stream.close();
+      } else {
+        stream.fail(error);
+      }
     }
 
-    function fail(label: string, error: unknown): void {
-      if (closed) return;
-      console.error(label, error);
-      close();
+    function close(): void {
+      finish();
+    }
+
+    function fail(message: string, operation: "open" | "receive" | "send", cause: unknown): void {
+      finish(new TransportError(message, "sse", operation, { cause }));
     }
 
     const post = async (json: string): Promise<void> => {
@@ -54,9 +65,12 @@ export class SseTransport implements Transport {
           body: json,
           signal: abort.signal,
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+          fail(`A2UI SSE send failed (HTTP ${response.status})`, "send", response);
+          return;
+        }
       } catch (error) {
-        fail("A2UI SSE send error", error);
+        fail("A2UI SSE send failed", "send", error);
       }
     };
 
@@ -84,7 +98,8 @@ export class SseTransport implements Transport {
       }
     };
     // Automatic SSE reconnects can send a snapshot to an old renderer.
-    source.onerror = (event) => fail("A2UI SSE connection error", event);
+    source.onerror = (event) =>
+      fail("A2UI SSE connection failed", opened ? "receive" : "open", event);
 
     return {
       messages: stream.messages,
